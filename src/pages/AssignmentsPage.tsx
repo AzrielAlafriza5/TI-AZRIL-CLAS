@@ -73,6 +73,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
 
   const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
   const [autoGradeTarget, setAutoGradeTarget] = useState<Assignment | null>(null);
+  const [autoGradeAllOpen, setAutoGradeAllOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = async () => {
@@ -238,37 +239,84 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
     }
   };
 
+  const handleAutoGradeAll = async () => {
+    setSubmitting(true);
+    try {
+      const res = await apiFetch<{
+        assignmentCount: number;
+        gradedCount: number;
+        awardedPoints: number;
+      }>('/api/assignments/auto-grade-all', { method: 'POST' });
+      onToast(
+        'success',
+        `Koreksi otomatis selesai: ${res.gradedCount} pengumpulan pada ${res.assignmentCount} tugas menerima nilai 100 & +${res.awardedPoints} poin.`
+      );
+      setAutoGradeAllOpen(false);
+      await loadData();
+      if (selectedAssignment) {
+        await openSubmissions(selectedAssignment);
+      }
+    } catch (err: any) {
+      onToast('error', err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const totalPendingSubmissions = assignments.reduce(
+    (sum, a) => sum + Math.max(0, (a.submission_count ?? 0) - (a.graded_count ?? 0)),
+    0
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={isAdmin ? 'Manajemen Tugas & Penilaian' : 'Tugas & Pengumpulan'}
         description={
           isAdmin
-            ? 'Buat tugas multi-kelas, periksa pengumpulan mahasiswa, dan berikan nilai serta poin akademik.'
+            ? 'Buat tugas multi-kelas, periksa pengumpulan mahasiswa, atau jalankan koreksi & beri nilai otomatis (+100 poin).'
             : 'Lihat daftar tugas kelas Anda, unduh lampiran, dan kirim pengumpulan sebelum deadline.'
         }
         actions={
           isAdmin ? (
-            <Button
-              onClick={() => {
-                const tomorrow = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 16);
-                setFormState({
-                  title: '',
-                  description: '',
-                  instructions: '',
-                  deadline: tomorrow,
-                  max_points: 100,
-                  class_ids: classes[0] ? [classes[0].id] : [],
-                  attachment_url: null,
-                  attachment_name: null,
-                });
-                setCreateOpen(true);
-              }}
-              disabled={classes.length === 0}
-            >
-              <Plus className="w-4 h-4" />
-              <span>Buat Tugas Baru</span>
-            </Button>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button
+                variant="secondary"
+                disabled={totalPendingSubmissions === 0}
+                onClick={() => setAutoGradeAllOpen(true)}
+                title={
+                  totalPendingSubmissions === 0
+                    ? 'Tidak ada pengumpulan yang menunggu penilaian'
+                    : `Koreksi otomatis ${totalPendingSubmissions} pengumpulan yang belum dinilai (+100 poin)`
+                }
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>
+                  Koreksi & Beri Nilai Semua (+100)
+                  {totalPendingSubmissions > 0 ? ` · ${totalPendingSubmissions}` : ''}
+                </span>
+              </Button>
+              <Button
+                onClick={() => {
+                  const tomorrow = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 16);
+                  setFormState({
+                    title: '',
+                    description: '',
+                    instructions: '',
+                    deadline: tomorrow,
+                    max_points: 100,
+                    class_ids: classes[0] ? [classes[0].id] : [],
+                    attachment_url: null,
+                    attachment_name: null,
+                  });
+                  setCreateOpen(true);
+                }}
+                disabled={classes.length === 0}
+              >
+                <Plus className="w-4 h-4" />
+                <span>Buat Tugas Baru</span>
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -350,7 +398,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                       }
                     >
                       <Sparkles className="w-3.5 h-3.5" />
-                      <span>Koreksi Otomatis (+100 Poin)</span>
+                      <span>Koreksi & Beri Nilai (+100)</span>
                     </Button>
                     <Button size="sm" onClick={() => openSubmissions(a)}>
                       <CheckSquare className="w-3.5 h-3.5" />
@@ -426,7 +474,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                   onClick={() => setAutoGradeTarget(selectedAssignment)}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Koreksi Otomatis (+100 Poin)</span>
+                  <span>Koreksi & Beri Nilai (+100)</span>
                 </Button>
               )}
               <Button variant="outline" size="sm" onClick={() => setSelectedAssignment(null)}>
@@ -813,17 +861,28 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
 
       <ConfirmDialog
         open={Boolean(autoGradeTarget)}
-        title="Koreksi Otomatis (+100 Poin)"
+        title="Koreksi & Beri Nilai Otomatis (+100 Poin)"
         description={
           autoGradeTarget
-            ? `Sebanyak ${Math.max(0, (autoGradeTarget.submission_count ?? 0) - (autoGradeTarget.graded_count ?? 0))} pengumpulan yang belum dinilai pada tugas "${autoGradeTarget.title}" akan otomatis dinilai 100 dan memperoleh tambahan +100 poin akademik.`
+            ? `Sebanyak ${Math.max(0, (autoGradeTarget.submission_count ?? 0) - (autoGradeTarget.graded_count ?? 0))} pengumpulan yang belum dinilai pada tugas "${autoGradeTarget.title}" akan otomatis dikoreksi dengan nilai 100 dan menerima tambahan +100 poin akademik.`
             : ''
         }
-        confirmLabel="Jalankan Koreksi Otomatis"
+        confirmLabel="Koreksi & Beri Nilai (+100)"
         danger={false}
         loading={submitting}
         onConfirm={handleAutoGrade}
         onCancel={() => setAutoGradeTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={autoGradeAllOpen}
+        title="Koreksi & Beri Nilai Semua Tugas (+100 Poin)"
+        description={`Sebanyak ${totalPendingSubmissions} pengumpulan mahasiswa yang belum dinilai pada seluruh tugas akan otomatis dikoreksi dengan nilai 100 dan memperoleh tambahan +100 poin akademik.`}
+        confirmLabel="Koreksi & Beri Nilai Semua"
+        danger={false}
+        loading={submitting}
+        onConfirm={handleAutoGradeAll}
+        onCancel={() => setAutoGradeAllOpen(false)}
       />
     </div>
   );

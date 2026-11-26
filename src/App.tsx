@@ -172,7 +172,11 @@ export default function App() {
         <div key={`${activeRoute}-${refreshTick}`} className="animate-page-enter">
           {activeRoute === 'dashboard' &&
             (user.role === 'admin' ? (
-              <AdminDashboard onNavigate={setActiveRoute} onSelectStudent={handleSelectStudent} />
+              <AdminDashboard
+                onNavigate={setActiveRoute}
+                onSelectStudent={handleSelectStudent}
+                onToast={addToast}
+              />
             ) : (
               <StudentDashboard onNavigate={setActiveRoute} />
             ))}

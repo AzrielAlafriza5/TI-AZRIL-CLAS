@@ -40,14 +40,16 @@ import {
   PageHeader,
 } from '../components/ui/DesignSystem.tsx';
 import { KpiGridSkeleton, HeroSkeleton } from '../components/ui/Skeleton.tsx';
+import { ConfirmDialog } from '../components/ui/Modal.tsx';
 import type { NavRoute } from '../components/layout/AppShell.tsx';
 
 interface AdminDashboardProps {
   onNavigate: (route: NavRoute) => void;
   onSelectStudent: (studentId: string) => void;
+  onToast?: (type: 'success' | 'error', text: string) => void;
 }
 
-export function AdminDashboard({ onNavigate, onSelectStudent }: AdminDashboardProps) {
+export function AdminDashboard({ onNavigate, onSelectStudent, onToast }: AdminDashboardProps) {
   const [programs, setPrograms] = useState<Array<{ id: string; name: string }>>([]);
   const [classes, setClasses] = useState<Array<{ id: string; name: string; study_program_id: string }>>([]);
 
@@ -60,15 +62,10 @@ export function AdminDashboard({ onNavigate, onSelectStudent }: AdminDashboardPr
   const [recentAssignments, setRecentAssignments] = useState<any[]>([]);
   const [recentStudents, setRecentStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [autoGradeTarget, setAutoGradeTarget] = useState<any | null>(null);
+  const [autoGrading, setAutoGrading] = useState(false);
 
-  useEffect(() => {
-    apiFetch<{ programs: any[]; classes: any[] }>('/api/reference/academic')
-      .then((res) => {
-        setPrograms(res.programs);
-        setClasses(res.classes);
-      })
-      .catch(() => {});
-
+  const loadSideLists = () => {
     apiFetch<{ logs: any[] }>('/api/admin/audit-logs?limit=6')
       .then((res) => setRecentLogs((res.logs || []).slice(0, 6)))
       .catch(() => {});
@@ -80,9 +77,9 @@ export function AdminDashboard({ onNavigate, onSelectStudent }: AdminDashboardPr
     apiFetch<{ students: any[] }>('/api/admin/students')
       .then((res) => setRecentStudents((res.students || []).slice(0, 4)))
       .catch(() => {});
-  }, []);
+  };
 
-  useEffect(() => {
+  const loadDashboardStats = () => {
     setLoading(true);
     const params = new URLSearchParams();
     if (studyProgramId) params.set('studyProgramId', studyProgramId);
@@ -93,7 +90,44 @@ export function AdminDashboard({ onNavigate, onSelectStudent }: AdminDashboardPr
       .then((res) => setData(res))
       .catch(() => {})
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    apiFetch<{ programs: any[]; classes: any[] }>('/api/reference/academic')
+      .then((res) => {
+        setPrograms(res.programs);
+        setClasses(res.classes);
+      })
+      .catch(() => {});
+
+    loadSideLists();
+  }, []);
+
+  useEffect(() => {
+    loadDashboardStats();
   }, [studyProgramId, classId, period]);
+
+  const handleConfirmAutoGrade = async () => {
+    if (!autoGradeTarget) return;
+    setAutoGrading(true);
+    try {
+      const res = await apiFetch<{ gradedCount: number; awardedPoints: number }>(
+        `/api/assignments/${autoGradeTarget.id}/auto-grade`,
+        { method: 'POST' }
+      );
+      onToast?.(
+        'success',
+        `Koreksi & beri nilai selesai: ${res.gradedCount} mahasiswa menerima +${res.awardedPoints} poin.`
+      );
+      setAutoGradeTarget(null);
+      loadSideLists();
+      loadDashboardStats();
+    } catch (err: any) {
+      onToast?.('error', err.message || 'Gagal menjalankan koreksi otomatis.');
+    } finally {
+      setAutoGrading(false);
+    }
+  };
 
   const filteredClasses = studyProgramId
     ? classes.filter((c) => c.study_program_id === studyProgramId)
@@ -600,19 +634,40 @@ export function AdminDashboard({ onNavigate, onSelectStudent }: AdminDashboardPr
                       Tugas Terbaru
                     </div>
                     <div className="divide-y divide-[#D5E4B6] rounded-[16px] border border-[#D5E4B6] px-3.5 bg-[#F0F8DF]/40">
-                      {recentAssignments.map((a: any) => (
-                        <div key={a.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
-                          <div className="min-w-0">
-                            <div className="font-semibold text-[#20251D] truncate">{a.title}</div>
-                            <div className="text-[#6F7B68] mt-0.5 tabular-nums">
-                              {a.class_name || 'Semua Kelas'} · Deadline {String(a.deadline).slice(0, 10)}
+                      {recentAssignments.map((a: any) => {
+                        const pending = Math.max(
+                          0,
+                          Number(a.submission_count ?? 0) - Number(a.graded_count ?? 0)
+                        );
+                        return (
+                          <div
+                            key={a.id}
+                            className="py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="font-semibold text-[#20251D] truncate">{a.title}</div>
+                              <div className="text-[#6F7B68] mt-0.5 tabular-nums">
+                                {a.submission_count ?? 0} masuk · {a.graded_count ?? 0} dinilai · Deadline{' '}
+                                {String(a.deadline).slice(0, 10)}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                disabled={pending === 0}
+                                onClick={() => setAutoGradeTarget(a)}
+                                className="!px-3 !py-1.5 !text-[11px]"
+                              >
+                                <Sparkles className="w-3 h-3" />
+                                <span>
+                                  {pending > 0 ? `Koreksi & Nilai (${pending})` : 'Sudah Dinilai'}
+                                </span>
+                              </Button>
                             </div>
                           </div>
-                          <span className="font-display font-bold text-[#3E7B27] tabular-nums shrink-0">
-                            {a.max_points} Poin
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -652,6 +707,21 @@ export function AdminDashboard({ onNavigate, onSelectStudent }: AdminDashboardPr
           </div>
         </>
       )}
+
+      <ConfirmDialog
+        open={Boolean(autoGradeTarget)}
+        title="Koreksi & Beri Nilai Otomatis (+100 Poin)"
+        description={
+          autoGradeTarget
+            ? `Sebanyak ${Math.max(0, Number(autoGradeTarget.submission_count ?? 0) - Number(autoGradeTarget.graded_count ?? 0))} pengumpulan yang belum dinilai pada tugas "${autoGradeTarget.title}" akan otomatis dikoreksi dengan nilai 100 dan memperoleh +100 poin akademik.`
+            : ''
+        }
+        confirmLabel="Koreksi & Beri Nilai (+100)"
+        danger={false}
+        loading={autoGrading}
+        onConfirm={handleConfirmAutoGrade}
+        onCancel={() => setAutoGradeTarget(null)}
+      />
     </div>
   );
 }
