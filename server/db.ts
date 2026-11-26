@@ -1,10 +1,25 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
-export const UPLOADS_DIR = path.resolve(process.cwd(), 'uploads');
+function resolveStorageRoot(): string {
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.join(os.tmpdir(), 'it_azril_clas');
+  }
+  const localRoot = process.cwd();
+  try {
+    fs.accessSync(localRoot, fs.constants.W_OK);
+    return localRoot;
+  } catch {
+    return path.join(os.tmpdir(), 'it_azril_clas');
+  }
+}
+
+const STORAGE_ROOT = resolveStorageRoot();
+const DATA_DIR = path.join(STORAGE_ROOT, 'data');
+export const UPLOADS_DIR = path.join(STORAGE_ROOT, 'uploads');
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -18,7 +33,11 @@ const DB_PATH = path.join(DATA_DIR, 'it_azril_clas.db');
 export const db = new DatabaseSync(DB_PATH);
 
 db.exec('PRAGMA foreign_keys = ON;');
-db.exec('PRAGMA journal_mode = WAL;');
+try {
+  db.exec('PRAGMA journal_mode = WAL;');
+} catch {
+  // Fallback if filesystem does not support WAL
+}
 
 export function hashPasswordSync(password: string): string {
   const salt = crypto.randomBytes(16).toString('hex');

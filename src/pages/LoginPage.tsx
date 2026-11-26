@@ -19,6 +19,7 @@ import type { AuthUser } from '../types/index.ts';
 interface LoginPageProps {
   adminProvisioned: boolean;
   adminManagedByEnv?: boolean;
+  serverError?: string | null;
   onLoginSuccess: (user: AuthUser, streakOutcome?: any) => void;
   onAdminProvisioned: () => void;
 }
@@ -26,6 +27,7 @@ interface LoginPageProps {
 export function LoginPage({
   adminProvisioned,
   adminManagedByEnv = false,
+  serverError = null,
   onLoginSuccess,
   onAdminProvisioned,
 }: LoginPageProps) {
@@ -224,10 +226,10 @@ export function LoginPage({
                 </p>
               </div>
 
-              {error && (
+              {(serverError || error) && (
                 <div className="mb-5 flex items-start gap-2.5 p-3.5 rounded-2xl bg-[#FCECEF] text-xs text-[#C44750] font-medium">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{error}</span>
+                  <span>{error || serverError}</span>
                 </div>
               )}
 
@@ -303,10 +305,10 @@ export function LoginPage({
                 mulai mengelola program studi, kelas, dan mahasiswa.
               </p>
 
-              {error && (
+              {(serverError || error) && (
                 <div className="mt-5 flex items-start gap-2.5 p-3.5 rounded-2xl bg-[#FCECEF] text-xs text-[#C44750] font-medium">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{error}</span>
+                  <span>{error || serverError}</span>
                 </div>
               )}
 
@@ -384,10 +386,10 @@ export function LoginPage({
                 </p>
               </div>
 
-              {error && (
+              {(serverError || error) && (
                 <div className="mb-5 flex items-start gap-2.5 p-3.5 rounded-2xl bg-[#FCECEF] text-xs text-[#C44750] font-medium">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{error}</span>
+                  <span>{error || serverError}</span>
                 </div>
               )}
 

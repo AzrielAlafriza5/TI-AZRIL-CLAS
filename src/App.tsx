@@ -33,6 +33,7 @@ export default function App() {
   const [booting, setBooting] = useState(true);
   const [adminProvisioned, setAdminProvisioned] = useState(true);
   const [adminManagedByEnv, setAdminManagedByEnv] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
   const [user, setUser] = useState<AuthUser | null>(null);
 
   const [activeRoute, setActiveRoute] = useState<NavRoute>('dashboard');
@@ -67,8 +68,11 @@ export default function App() {
         const status = await apiFetch<{ adminProvisioned: boolean; adminManagedByEnv?: boolean }>(
           '/api/auth/status'
         );
-        setAdminProvisioned(status.adminProvisioned);
-        setAdminManagedByEnv(Boolean(status.adminManagedByEnv));
+        setServerError(null);
+        if (typeof status?.adminProvisioned === 'boolean') {
+          setAdminProvisioned(status.adminProvisioned);
+        }
+        setAdminManagedByEnv(Boolean(status?.adminManagedByEnv));
         try {
           const me = await apiFetch<{ user: AuthUser }>('/api/auth/me');
           setUser(me.user);
@@ -76,8 +80,10 @@ export default function App() {
         } catch {
           setUser(null);
         }
-      } catch {
-        // ignore
+      } catch (err: any) {
+        setServerError(
+          err?.message || 'Tidak dapat terhubung ke server API IT AZRIL CLAS.'
+        );
       } finally {
         setBooting(false);
       }
@@ -129,6 +135,7 @@ export default function App() {
       <LoginPage
         adminProvisioned={adminProvisioned}
         adminManagedByEnv={adminManagedByEnv}
+        serverError={serverError}
         onLoginSuccess={handleLoginSuccess}
         onAdminProvisioned={() => setAdminProvisioned(true)}
       />

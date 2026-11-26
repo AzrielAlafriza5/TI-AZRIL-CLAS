@@ -35,15 +35,29 @@ export async function apiFetch<T = any>(
     credentials: 'include',
   });
 
-  const contentType = res.headers.get('content-type') || '';
-  const data = contentType.includes('application/json') ? await res.json() : await res.text();
+  const contentType = (res.headers.get('content-type') || '').toLowerCase();
+  const isJson = contentType.includes('application/json');
+  const data = isJson ? await res.json() : await res.text();
 
   if (!res.ok) {
+    if (res.status === 405 && !isJson) {
+      throw new ApiError(
+        'Server backend API belum aktif (HTTP 405). Pastikan server backend atau Vercel /api serverless functions telah di-deploy.',
+        405
+      );
+    }
     const message =
       typeof data === 'object' && data && 'error' in data
         ? String((data as any).error)
         : `Permintaan gagal (${res.status})`;
     throw new ApiError(message, res.status);
+  }
+
+  if (path.startsWith('/api') && !isJson) {
+    throw new ApiError(
+      'Backend API tidak terhubung (respons bukan JSON). Pastikan /api berjalan dengan benar.',
+      503
+    );
   }
 
   return data as T;

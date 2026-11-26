@@ -1,27 +1,10 @@
-import 'dotenv/config';
 import express from 'express';
 import path from 'node:path';
 import { createServer as createViteServer } from 'vite';
-import { initDatabase } from './server/db.ts';
-import { authRouter } from './server/routes-auth.ts';
-import { adminRouter } from './server/routes-admin.ts';
-import { learningRouter } from './server/routes-learning.ts';
+import { createApiApp } from './server/app.ts';
 
 async function startServer() {
-  initDatabase();
-
-  const app = express();
-  app.set('trust proxy', true);
-  app.use(express.json({ limit: '12mb' }));
-
-  app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', app: 'IT AZRIL CLAS' });
-  });
-
-  // Mount API routes
-  app.use('/api/auth', authRouter);
-  app.use('/api/admin', adminRouter);
-  app.use('/api', learningRouter);
+  const app = createApiApp();
 
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
