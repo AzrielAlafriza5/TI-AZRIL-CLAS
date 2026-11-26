@@ -18,6 +18,7 @@ import {
 } from '../components/ui/DesignSystem.tsx';
 import { StudentStatusIndicator } from '../components/ui/StatusBadge.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
+import { StudentExcelImportPanel } from '../components/admin/StudentExcelImportPanel.tsx';
 import type { StudentStatus } from '../types/index.ts';
 
 interface ExcelImportPageProps {
@@ -25,7 +26,7 @@ interface ExcelImportPageProps {
 }
 
 export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
-  const [tab, setTab] = useState<'attendance' | 'status' | 'history'>('attendance');
+  const [tab, setTab] = useState<'students' | 'attendance' | 'status' | 'history'>('students');
 
   // Attendance Import State
   const [attDate, setAttDate] = useState(new Date().toISOString().slice(0, 10));
@@ -194,11 +195,19 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
         value={tab}
         onChange={setTab}
         options={[
+          { id: 'students', label: 'Impor Mahasiswa (HES)' },
           { id: 'attendance', label: 'Impor Absensi' },
           { id: 'status', label: 'Impor Status Mahasiswa' },
           { id: 'history', label: 'Riwayat Impor Excel' },
         ]}
       />
+
+      {/* TAB 0: STUDENT DATA IMPORT */}
+      {tab === 'students' && (
+        <Card>
+          <StudentExcelImportPanel onToast={onToast} />
+        </Card>
+      )}
 
       {/* TAB 1: ATTENDANCE IMPORT */}
       {tab === 'attendance' && (
@@ -509,7 +518,11 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
                         {String(h.created_at).slice(0, 16).replace('T', ' ')}
                       </td>
                       <td className="py-3 px-4 text-xs font-bold uppercase text-[#3E7B27]">
-                        {h.import_type === 'attendance' ? 'Absensi' : 'Status Mahasiswa'}
+                        {h.import_type === 'students'
+                          ? 'Data Mahasiswa'
+                          : h.import_type === 'attendance'
+                            ? 'Absensi'
+                            : 'Status Mahasiswa'}
                       </td>
                       <td className="py-3 px-4 font-semibold text-[#20251D]">{h.file_name}</td>
                       <td className="py-3 px-4 text-right tabular-nums text-[#6F7B68]">

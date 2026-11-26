@@ -13,6 +13,12 @@ import {
   requireAdmin,
   requireAuth,
 } from './auth.ts';
+import {
+  normalizeStudentNameKey,
+  normalizeStudentNimKey,
+  parseStudentExcelBuffer,
+  resolveHesTargetAssignment,
+} from './excel-student-import.ts';
 import type { AttendanceStatus, StudentStatus } from '../src/types/index.ts';
 
 export const adminRouter = Router();
@@ -1396,6 +1402,306 @@ adminRouter.post('/import/attendance/commit', (req: AuthedRequest, res) => {
   });
 
   res.json({ ok: true, committed, importId });
+});
+
+// ---------------------------------------------------------------------------
+// STUDENT DATA EXCEL IMPORT (HES ONLY + CELL COLOR STATUS + DEDUPLICATION)
+// ---------------------------------------------------------------------------
+adminRouter.post('/import/students/preview', uploadMemory.single('file'), async (req, res, next) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ error: 'File Excel (.xlsx / .xls) wajib diunggah.' });
+      return;
+    }
+
+    const originalName = String(req.file.originalname || 'mahasiswa.xlsx');
+    const lowerName = originalName.toLowerCase();
+    if (!lowerName.endsWith('.xlsx') && !lowerName.endsWith('.xls')) {
+      res.status(400).json({ error: 'Format file tidak didukung. Unggah file Excel (.xlsx atau .xls).' });
+      return;
+    }
+
+    let selectedSheets: string[] | undefined;
+    if (typeof req.body?.selectedSheets === 'string' && req.body.selectedSheets.trim()) {
+      try {
+        const parsed = JSON.parse(req.body.selectedSheets);
+        if (Array.isArray(parsed)) {
+          selectedSheets = parsed.map((s) => String(s));
+        }
+      } catch {
+        // Ignore malformed selectedSheets filter
+      }
+    }
+
+    const preview = await parseStudentExcelBuffer(req.file.buffer, originalName, { selectedSheets });
+    res.json(preview);
+  } catch (err) {
+    next(err);
+  }
+});
+
+function addDaysToIsoDate(isoDate: string, days: number): string {
+  const m = isoDate.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return getJakartaDateString();
+  const utc = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) + days * 86400000;
+  return new Date(utc).toISOString().slice(0, 10);
+}
+
+adminRouter.post('/import/students/commit', (req: AuthedRequest, res) => {
+  const fileName = String(req.body?.fileName ?? 'data_mahasiswa.xlsx').trim() || 'data_mahasiswa.xlsx';
+  const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+  const syncAttendance = Boolean(req.body?.syncAttendance);
+  const rawBaseDate = String(req.body?.attendanceStartDate ?? '').trim();
+  const baseAttendanceDate = /^\d{4}-\d{2}-\d{2}$/.test(rawBaseDate)
+    ? rawBaseDate
+    : getJakartaDateString();
+
+  if (rows.length === 0) {
+    res.status(400).json({ error: 'Tidak ada data baris untuk diproses.' });
+    return;
+  }
+
+  const firstHesSheet = rows.find((r: any) => r?.isHes && r?.sheetName)?.sheetName;
+
+  let createdTotal = 0;
+  let createdAktif = 0;
+  let createdLulus = 0;
+  let createdAfk = 0;
+  let skippedDuplicate = 0;
+  let skippedNonHes = 0;
+  let invalidCount = 0;
+  let attendanceSynced = 0;
+  let targetProgramName = 'HES';
+  let targetClassName = 'HES-3B';
+  const importId = crypto.randomUUID();
+
+  withTransaction(() => {
+    // Resolve or ensure Prodi HES & single active class
+    const targetInfo = resolveHesTargetAssignment(
+      typeof firstHesSheet === 'string' ? firstHesSheet : undefined
+    );
+    let studyProgramId = targetInfo.studyProgramId;
+    let classId = targetInfo.classId;
+    targetProgramName = targetInfo.studyProgramCode;
+    targetClassName = targetInfo.className;
+
+    if (!studyProgramId) {
+      studyProgramId = crypto.randomUUID();
+      db.prepare(`
+        INSERT INTO study_programs (id, code, name, description)
+        VALUES (?, 'HES', 'Hukum Ekonomi Syariah', 'Program Studi Hukum Ekonomi Syariah')
+      `).run(studyProgramId);
+    }
+
+    if (!classId) {
+      classId = crypto.randomUUID();
+      db.prepare(`
+        INSERT INTO classes (id, study_program_id, name, academic_year, description)
+        VALUES (?, ?, ?, '2026/2027', 'Kelas aktif Program Studi HES')
+      `).run(classId, studyProgramId, targetClassName);
+    }
+
+    // Load authoritative existing NIMs, names, and usernames to prevent any duplication
+    const existingStudents = db
+      .prepare(`SELECT nim, full_name FROM students`)
+      .all() as Array<{ nim: string; full_name: string }>;
+    const existingProfiles = db
+      .prepare(`SELECT username FROM profiles`)
+      .all() as Array<{ username: string }>;
+
+    const usedNims = new Set<string>(
+      existingStudents.map((s) => normalizeStudentNimKey(s.nim).toLowerCase())
+    );
+    for (const p of existingProfiles) {
+      usedNims.add(normalizeStudentNimKey(p.username).toLowerCase());
+    }
+    const usedNames = new Set<string>(
+      existingStudents.map((s) => normalizeStudentNameKey(s.full_name))
+    );
+
+    for (const rawRow of rows) {
+      const actionState = String(rawRow?.actionState ?? '');
+      const isHes = Boolean(rawRow?.isHes);
+      const nim = normalizeStudentNimKey(String(rawRow?.nim ?? ''));
+      const fullName = String(rawRow?.fullName ?? '').trim().replace(/\s+/g, ' ');
+
+      if (!isHes || actionState === 'skipped_non_hes') {
+        skippedNonHes++;
+        continue;
+      }
+      if (!nim || !fullName || actionState === 'invalid') {
+        invalidCount++;
+        continue;
+      }
+      if (actionState === 'skipped_duplicate') {
+        skippedDuplicate++;
+        continue;
+      }
+
+      const nimKey = nim.toLowerCase();
+      const nameKey = normalizeStudentNameKey(fullName);
+
+      if (usedNims.has(nimKey) || usedNames.has(nameKey)) {
+        skippedDuplicate++;
+        continue;
+      }
+
+      const rawStatus = String(rawRow?.status ?? 'netral').trim();
+      const status: StudentStatus = ['netral', 'hijau', 'merah'].includes(rawStatus)
+        ? (rawStatus as StudentStatus)
+        : 'netral';
+
+      const profileId = crypto.randomUUID();
+      const studentId = crypto.randomUUID();
+      const passwordHash = hashPasswordSync(nim);
+
+      db.prepare(`
+        INSERT INTO profiles (id, username, full_name, email, password_hash, role)
+        VALUES (?, ?, ?, NULL, ?, 'student')
+      `).run(profileId, nim, fullName, passwordHash);
+
+      db.prepare(`
+        INSERT INTO students (id, profile_id, nim, full_name, study_program_id, class_id, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(studentId, profileId, nim, fullName, studyProgramId, classId, status);
+
+      db.prepare(`
+        INSERT INTO login_streaks (id, student_id, current_streak, best_streak, total_login_days)
+        VALUES (?, ?, 0, 0, 0)
+      `).run(crypto.randomUUID(), studentId);
+
+      if (status !== 'netral') {
+        db.prepare(`
+          INSERT INTO student_status_history (id, student_id, previous_status, new_status, reason, source, changed_by)
+          VALUES (?, ?, 'netral', ?, 'Deteksi warna label Excel saat impor data mahasiswa', 'excel', ?)
+        `).run(crypto.randomUUID(), studentId, status, req.auth!.profileId);
+      }
+
+      // Optional initial weekly attendance sync (Minggu ke-1 .. Minggu ke-9)
+      if (syncAttendance && Array.isArray(rawRow?.attendanceWeeks)) {
+        let studentPointChanged = false;
+        for (const wk of rawRow.attendanceWeeks) {
+          const weekNum = Math.round(Number(wk?.week ?? 0));
+          const attStatus = String(wk?.status ?? '').trim() as AttendanceStatus;
+          if (
+            weekNum < 1 ||
+            weekNum > 9 ||
+            !['hadir', 'izin', 'sakit', 'alpha'].includes(attStatus)
+          ) {
+            continue;
+          }
+
+          const attDate = addDaysToIsoDate(baseAttendanceDate, (weekNum - 1) * 7);
+          const refId = `${attDate}:m${weekNum}`;
+
+          const attRes = db
+            .prepare(`
+              INSERT OR IGNORE INTO attendance (id, student_id, class_id, attendance_date, meeting_number, status, source, import_id, recorded_by)
+              VALUES (?, ?, ?, ?, ?, ?, 'excel', ?, ?)
+            `)
+            .run(
+              crypto.randomUUID(),
+              studentId,
+              classId,
+              attDate,
+              weekNum,
+              attStatus,
+              importId,
+              req.auth!.profileId
+            );
+
+          if (attRes.changes > 0) {
+            attendanceSynced++;
+            const pts = getAttendancePoints(attStatus);
+            if (pts !== 0) {
+              db.prepare(`
+                INSERT OR IGNORE INTO point_transactions (id, student_id, amount, source, description, reference_type, reference_id, admin_id)
+                VALUES (?, ?, ?, 'attendance', ?, 'attendance', ?, ?)
+              `).run(
+                crypto.randomUUID(),
+                studentId,
+                pts,
+                `Sinkronisasi awal Minggu ke-${weekNum} (${attDate}) — ${attStatus.toUpperCase()}`,
+                refId,
+                req.auth!.profileId
+              );
+              studentPointChanged = true;
+            }
+          }
+        }
+        if (studentPointChanged) {
+          recalculateStudentTotals(studentId);
+        }
+      }
+
+      usedNims.add(nimKey);
+      usedNames.add(nameKey);
+      createdTotal++;
+      if (status === 'netral') createdAktif++;
+      else if (status === 'hijau') createdLulus++;
+      else if (status === 'merah') createdAfk++;
+    }
+
+    const skippedTotal = skippedDuplicate + skippedNonHes + invalidCount;
+    const summaryPayload = {
+      totalProcessed: rows.length,
+      createdTotal,
+      createdAktif,
+      createdLulus,
+      createdAfk,
+      skippedTotal,
+      skippedDuplicate,
+      skippedNonHes,
+      invalidCount,
+      attendanceSynced,
+      targetProgram: targetProgramName,
+      targetClass: targetClassName,
+    };
+
+    db.prepare(`
+      INSERT INTO excel_import_history (id, import_type, file_name, total_rows, matched_rows, skipped_rows, error_rows, summary_json, imported_by)
+      VALUES (?, 'students', ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      importId,
+      fileName,
+      rows.length,
+      createdTotal,
+      skippedTotal,
+      invalidCount,
+      JSON.stringify(summaryPayload),
+      req.auth!.profileId
+    );
+
+    createNotification(
+      req.auth!.profileId,
+      'Impor Data Mahasiswa Excel Selesai',
+      `${createdTotal} akun mahasiswa Prodi ${targetProgramName} (${targetClassName}) berhasil dibuat dari ${fileName}.`,
+      'import'
+    );
+
+    logAudit(req.auth!.profileId, 'EXCEL_IMPORT_STUDENTS', 'excel_import_history', importId, summaryPayload);
+  });
+
+  const skippedTotal = skippedDuplicate + skippedNonHes + invalidCount;
+
+  res.json({
+    ok: true,
+    importId,
+    targetProgram: targetProgramName,
+    targetClass: targetClassName,
+    summary: {
+      totalProcessed: rows.length,
+      createdTotal,
+      createdAktif,
+      createdLulus,
+      createdAfk,
+      skippedTotal,
+      skippedDuplicate,
+      skippedNonHes,
+      invalidCount,
+      attendanceSynced,
+    },
+  });
 });
 
 adminRouter.get('/import/history', (_req, res) => {

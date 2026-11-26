@@ -40,7 +40,8 @@ import {
   PageHeader,
 } from '../components/ui/DesignSystem.tsx';
 import { KpiGridSkeleton, HeroSkeleton } from '../components/ui/Skeleton.tsx';
-import { ConfirmDialog } from '../components/ui/Modal.tsx';
+import { ConfirmDialog, Modal } from '../components/ui/Modal.tsx';
+import { StudentExcelImportPanel } from '../components/admin/StudentExcelImportPanel.tsx';
 import type { NavRoute } from '../components/layout/AppShell.tsx';
 
 interface AdminDashboardProps {
@@ -64,6 +65,7 @@ export function AdminDashboard({ onNavigate, onSelectStudent, onToast }: AdminDa
   const [loading, setLoading] = useState(true);
   const [autoGradeTarget, setAutoGradeTarget] = useState<any | null>(null);
   const [autoGrading, setAutoGrading] = useState(false);
+  const [studentImportOpen, setStudentImportOpen] = useState(false);
 
   const loadSideLists = () => {
     apiFetch<{ logs: any[] }>('/api/admin/audit-logs?limit=6')
@@ -134,16 +136,17 @@ export function AdminDashboard({ onNavigate, onSelectStudent, onToast }: AdminDa
     : classes;
 
   const quickActions: Array<{
+    key: string;
     label: string;
     sublabel: string;
-    route: NavRoute;
+    onClick: () => void;
     icon: any;
   }> = [
-    { label: 'Tambah Mahasiswa', sublabel: 'Kelola data & akun', route: 'students', icon: UserPlus },
-    { label: 'Input Absensi', sublabel: 'Catat kehadiran kelas', route: 'attendance', icon: CalendarCheck },
-    { label: 'Kelola Tugas', sublabel: 'Buat & nilai tugas', route: 'assignments', icon: ClipboardList },
-    { label: 'Berikan Poin', sublabel: 'Reward & penyesuaian', route: 'points', icon: Coins },
-    { label: 'Import Excel', sublabel: 'Sinkronisasi massal', route: 'excel-import', icon: FileSpreadsheet },
+    { key: 'students', label: 'Tambah Mahasiswa', sublabel: 'Kelola data & akun', onClick: () => onNavigate('students'), icon: UserPlus },
+    { key: 'student-excel', label: 'Impor Mahasiswa', sublabel: 'Excel Prodi HES + Warna', onClick: () => setStudentImportOpen(true), icon: FileSpreadsheet },
+    { key: 'attendance', label: 'Input Absensi', sublabel: 'Catat kehadiran kelas', onClick: () => onNavigate('attendance'), icon: CalendarCheck },
+    { key: 'assignments', label: 'Kelola Tugas', sublabel: 'Buat & nilai tugas', onClick: () => onNavigate('assignments'), icon: ClipboardList },
+    { key: 'points', label: 'Berikan Poin', sublabel: 'Reward & penyesuaian', onClick: () => onNavigate('points'), icon: Coins },
   ];
 
   return (
@@ -248,6 +251,14 @@ export function AdminDashboard({ onNavigate, onSelectStudent, onToast }: AdminDa
                     <Users className="w-4 h-4 text-[#B5D45D]" />
                     <span>Data Mahasiswa</span>
                   </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setStudentImportOpen(true)}
+                    className="!bg-[#232822] !border-[#232822] !text-[#B5D45D] hover:!border-[#B5D45D]/50"
+                  >
+                    <FileSpreadsheet className="w-4 h-4" />
+                    <span>Impor Data Mahasiswa (Excel)</span>
+                  </Button>
                 </div>
               </div>
 
@@ -317,9 +328,9 @@ export function AdminDashboard({ onNavigate, onSelectStudent, onToast }: AdminDa
                 const Icon = act.icon;
                 return (
                   <button
-                    key={act.route}
+                    key={act.key}
                     type="button"
-                    onClick={() => onNavigate(act.route)}
+                    onClick={act.onClick}
                     className="text-left p-4 rounded-[24px] bg-white border border-[#D5E4B6] hover:border-[#B5D45D] hover:bg-[#F0F8DF]/40 transition-all duration-150 active:scale-[0.99] flex items-center gap-3 cursor-pointer"
                   >
                     <div className="w-10 h-10 rounded-2xl bg-[#DCECB8] text-[#20251D] flex items-center justify-center shrink-0">
@@ -722,6 +733,23 @@ export function AdminDashboard({ onNavigate, onSelectStudent, onToast }: AdminDa
         onConfirm={handleConfirmAutoGrade}
         onCancel={() => setAutoGradeTarget(null)}
       />
+
+      <Modal
+        open={studentImportOpen}
+        title="Impor Data Mahasiswa (Excel)"
+        subtitle="Pemindaian otomatis Prodi HES, deteksi warna label (Merah/Hijau/Netral), pembuatan akun NIM, dan pencegahan duplikasi."
+        onClose={() => setStudentImportOpen(false)}
+        maxWidthClass="max-w-5xl"
+      >
+        <StudentExcelImportPanel
+          onToast={onToast}
+          onImportComplete={() => {
+            loadSideLists();
+            loadDashboardStats();
+          }}
+          onClose={() => setStudentImportOpen(false)}
+        />
+      </Modal>
     </div>
   );
 }

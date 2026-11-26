@@ -303,7 +303,7 @@ export function initDatabase(): void {
     -- 20. excel_import_history
     CREATE TABLE IF NOT EXISTS excel_import_history (
       id TEXT PRIMARY KEY,
-      import_type TEXT NOT NULL CHECK (import_type IN ('attendance', 'student_status')),
+      import_type TEXT NOT NULL CHECK (import_type IN ('attendance', 'student_status', 'students')),
       file_name TEXT NOT NULL,
       total_rows INTEGER NOT NULL DEFAULT 0,
       matched_rows INTEGER NOT NULL DEFAULT 0,
@@ -332,6 +332,34 @@ export function initDatabase(): void {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  // Safe migration if excel_import_history was created before 'students' import_type was added
+  const importHistMeta = db
+    .prepare(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'excel_import_history'`)
+    .get() as { sql?: string } | undefined;
+  if (importHistMeta?.sql && !importHistMeta.sql.includes("'students'")) {
+    db.exec(`
+      BEGIN IMMEDIATE;
+      CREATE TABLE excel_import_history_migrated (
+        id TEXT PRIMARY KEY,
+        import_type TEXT NOT NULL CHECK (import_type IN ('attendance', 'student_status', 'students')),
+        file_name TEXT NOT NULL,
+        total_rows INTEGER NOT NULL DEFAULT 0,
+        matched_rows INTEGER NOT NULL DEFAULT 0,
+        skipped_rows INTEGER NOT NULL DEFAULT 0,
+        error_rows INTEGER NOT NULL DEFAULT 0,
+        summary_json TEXT NOT NULL DEFAULT '{}',
+        imported_by TEXT NOT NULL REFERENCES profiles(id),
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      INSERT INTO excel_import_history_migrated
+        SELECT id, import_type, file_name, total_rows, matched_rows, skipped_rows, error_rows, summary_json, imported_by, created_at
+        FROM excel_import_history;
+      DROP TABLE excel_import_history;
+      ALTER TABLE excel_import_history_migrated RENAME TO excel_import_history;
+      COMMIT;
+    `);
+  }
 
   // Seed default system settings if absent
   const defaultSettings: Record<string, unknown> = {
