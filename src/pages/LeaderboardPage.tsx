@@ -307,10 +307,16 @@ export function LeaderboardPage({ user }: LeaderboardPageProps) {
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-[#6F7B68] tabular-nums">
-                            NIM {e.nim}
-                            <span className="tablet:hidden"> · {e.class_name}</span>
-                          </div>
+                          {user.role === 'admin' && e.nim ? (
+                            <div className="text-xs text-[#6F7B68] tabular-nums">
+                              NIM {e.nim}
+                              <span className="tablet:hidden"> · {e.class_name}</span>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-[#6F7B68] tablet:hidden">
+                              {e.class_name}
+                            </div>
+                          )}
                         </td>
                         <td className="py-3.5 px-5 text-xs text-[#6F7B68] hidden tablet:table-cell">
                           <div className="font-semibold text-[#20251D]">{e.class_name}</div>

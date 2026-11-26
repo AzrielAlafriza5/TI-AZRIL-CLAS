@@ -902,10 +902,11 @@ learningRouter.get('/leaderboard', (req: AuthedRequest, res) => {
     `)
     .all(...queryParams) as Array<Record<string, any>>;
 
+  const isAdmin = req.auth!.role === 'admin';
   const ranked = rows.map((r, index) => ({
     rank: index + 1,
     student_id: String(r.student_id),
-    nim: String(r.nim),
+    ...(isAdmin ? { nim: String(r.nim) } : {}),
     full_name: String(r.full_name),
     class_id: String(r.class_id),
     class_name: String(r.class_name),

@@ -199,7 +199,7 @@ export interface NotificationItem {
 export interface LeaderboardEntry {
   rank: number;
   student_id: string;
-  nim: string;
+  nim?: string;
   full_name: string;
   class_id: string;
   class_name: string;
