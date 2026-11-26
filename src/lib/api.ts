@@ -40,10 +40,10 @@ export async function apiFetch<T = any>(
   const data = isJson ? await res.json() : await res.text();
 
   if (!res.ok) {
-    if (res.status === 405 && !isJson) {
+    if ((res.status === 404 || res.status === 405) && !isJson) {
       throw new ApiError(
-        'Server backend API belum aktif (HTTP 405). Pastikan server backend atau Vercel /api serverless functions telah di-deploy.',
-        405
+        `Endpoint API belum aktif pada server (HTTP ${res.status}). Pastikan perubahan terbaru sudah di-push ke GitHub dan Vercel selesai melakukan Redeploy.`,
+        res.status
       );
     }
     const message =
