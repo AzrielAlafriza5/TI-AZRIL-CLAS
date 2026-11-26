@@ -169,7 +169,7 @@ export default function App() {
         toasts={toasts}
         onDismissToast={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
       >
-        <div key={`${activeRoute}-${refreshTick}`}>
+        <div key={`${activeRoute}-${refreshTick}`} className="animate-page-enter">
           {activeRoute === 'dashboard' &&
             (user.role === 'admin' ? (
               <AdminDashboard onNavigate={setActiveRoute} onSelectStudent={handleSelectStudent} />
@@ -240,30 +240,30 @@ export default function App() {
       >
         {streakPopup && (
           <div className="text-center space-y-4">
-            <div className="w-16 h-16 rounded-3xl bg-[#DBECB8] border border-[#B5D45D] mx-auto flex items-center justify-center">
-              <Flame className="w-9 h-9 text-[#D8A33D] fill-[#D8A33D] animate-flame" />
+            <div className="w-16 h-16 rounded-[24px] bg-[#171A17] border border-[#232822] mx-auto flex items-center justify-center">
+              <Flame className="w-9 h-9 text-[#FF7A1A] fill-[#FF7A1A] animate-flame" />
             </div>
             <div>
-              <div className="text-2xl font-extrabold text-[#181A17] tabular-nums">
+              <div className="font-display text-2xl font-extrabold text-[#20251D] tabular-nums">
                 {streakPopup.currentStreak} DAY STREAK
               </div>
-              <p className="text-sm text-[#73796C] mt-1">
+              <p className="text-sm text-[#4E5849] mt-1">
                 Anda meraih{' '}
-                <span className="font-bold text-[#3D914C]">+{streakPopup.expEarnedToday} EXP</span>{' '}
+                <span className="font-bold text-[#3E7B27]">+{streakPopup.expEarnedToday} EXP</span>{' '}
                 hari ini!
               </p>
             </div>
 
             {streakPopup.leveledUpTo && (
-              <div className="p-3.5 rounded-2xl bg-[#DBECB8] border border-[#B5D45D] flex items-center justify-center gap-2 text-sm font-bold text-[#181A17]">
-                <Sparkles className="w-4 h-4 text-[#3D914C]" />
+              <div className="p-3.5 rounded-[16px] bg-[#DCECB8] border border-[#B5D45D] flex items-center justify-center gap-2 text-sm font-bold text-[#20251D]">
+                <Sparkles className="w-4 h-4 text-[#3E7B27]" />
                 <span>Naik ke Level {streakPopup.leveledUpTo}!</span>
               </div>
             )}
 
             {streakPopup.unlockedAchievements?.length > 0 && (
-              <div className="p-3.5 rounded-2xl bg-[#F0F8E0] border border-[#DDE6C9] text-xs text-[#181A17] space-y-1">
-                <div className="font-bold flex items-center justify-center gap-1.5 text-[#3D914C]">
+              <div className="p-3.5 rounded-[16px] bg-[#F0F8DF] border border-[#D5E4B6] text-xs text-[#20251D] space-y-1">
+                <div className="font-bold flex items-center justify-center gap-1.5 text-[#3E7B27]">
                   <Trophy className="w-3.5 h-3.5" />
                   <span>Pencapaian Baru Terbuka</span>
                 </div>

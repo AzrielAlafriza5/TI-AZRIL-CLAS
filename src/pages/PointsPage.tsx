@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Coins, Plus, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
-import { Card, Button, Input, Select, SearchBar } from '../components/ui/DesignSystem.tsx';
+import {
+  Card,
+  Button,
+  Input,
+  Select,
+  SearchBar,
+  PageHeader,
+  EmptyState,
+} from '../components/ui/DesignSystem.tsx';
 import { Modal } from '../components/ui/Modal.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
 import type { PointTransaction, StudentProfile, SystemSettings } from '../types/index.ts';
@@ -143,26 +151,24 @@ export function PointsPage({ onToast }: PointsPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#181A17] tracking-tight">Manajemen Poin Akademik</h1>
-          <p className="text-sm text-[#73796C] mt-1">
-            Berikan poin keaktifan secara individual atau massal. Koreksi menggunakan transaksi penyesuaian tanpa menghapus histori.
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            setTargetType('single');
-            setSelectedIds(students[0] ? [students[0].id] : []);
-            handleSourceChange('question');
-            setAwardOpen(true);
-          }}
-          disabled={students.length === 0}
-        >
-          <Plus className="w-4 h-4" />
-          <span>Berikan Poin</span>
-        </Button>
-      </div>
+      <PageHeader
+        title="Manajemen Poin Akademik"
+        description="Berikan poin keaktifan secara individual atau massal. Koreksi menggunakan transaksi penyesuaian tanpa menghapus histori."
+        actions={
+          <Button
+            onClick={() => {
+              setTargetType('single');
+              setSelectedIds(students[0] ? [students[0].id] : []);
+              handleSourceChange('question');
+              setAwardOpen(true);
+            }}
+            disabled={students.length === 0}
+          >
+            <Plus className="w-4 h-4" />
+            <span>Berikan Poin</span>
+          </Button>
+        }
+      />
 
       {/* Filters */}
       <Card className="p-4 flex flex-wrap items-center gap-3">
@@ -201,16 +207,17 @@ export function PointsPage({ onToast }: PointsPageProps) {
             <TableSkeleton rows={6} />
           </div>
         ) : transactions.length === 0 ? (
-          <div className="p-12 text-center">
-            <Coins className="w-8 h-8 text-[#73796C] mx-auto mb-3" />
-            <p className="text-sm text-[#73796C]">Belum ada transaksi poin tercatat.</p>
-          </div>
+          <EmptyState
+            icon={<Coins className="w-5 h-5" />}
+            title="Belum ada transaksi poin"
+            description="Transaksi poin akademik dari absensi, tugas, atau pemberian langsung akan tercatat di sini."
+          />
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
+                  <tr className="border-b border-[#D5E4B6] bg-[#F0F8DF]/70 text-xs font-semibold text-[#6F7B68]">
                     <th className="py-3.5 px-5">Waktu</th>
                     <th className="py-3.5 px-4">Mahasiswa</th>
                     <th className="py-3.5 px-4">Sumber</th>
@@ -219,25 +226,25 @@ export function PointsPage({ onToast }: PointsPageProps) {
                     <th className="py-3.5 px-5 text-right">Koreksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DDE6C9]/60">
+                <tbody className="divide-y divide-[#D5E4B6]/70">
                   {transactions.map((t) => (
-                    <tr key={t.id} className="hover:bg-[#F0F8E0]/50 transition-colors">
-                      <td className="py-3.5 px-5 text-xs text-[#73796C] tabular-nums whitespace-nowrap">
+                    <tr key={t.id} className="hover:bg-[#F0F8DF]/50 transition-colors">
+                      <td className="py-3.5 px-5 text-xs text-[#6F7B68] tabular-nums whitespace-nowrap">
                         {String(t.created_at).slice(0, 16).replace('T', ' ')}
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-[#181A17]">{t.student_name}</div>
-                        <div className="text-xs text-[#73796C] tabular-nums">
+                        <div className="font-display font-bold text-[#20251D]">{t.student_name}</div>
+                        <div className="text-xs text-[#6F7B68] tabular-nums">
                           {t.nim} · {t.class_name}
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-xs font-bold text-[#73796C] uppercase">
+                      <td className="py-3.5 px-4 text-xs font-bold text-[#6F7B68] uppercase">
                         {t.source.replace('_', ' ')}
                       </td>
-                      <td className="py-3.5 px-4 text-[#181A17]">{t.description}</td>
+                      <td className="py-3.5 px-4 text-[#20251D]">{t.description}</td>
                       <td
-                        className={`py-3.5 px-4 text-right font-bold tabular-nums ${
-                          t.amount >= 0 ? 'text-[#3D914C]' : 'text-[#C44750]'
+                        className={`py-3.5 px-4 text-right font-display font-bold tabular-nums ${
+                          t.amount >= 0 ? 'text-[#3E7B27]' : 'text-[#D13447]'
                         }`}
                       >
                         {t.amount >= 0 ? `+${t.amount}` : t.amount}
@@ -251,7 +258,7 @@ export function PointsPage({ onToast }: PointsPageProps) {
                               setAdjustReason('');
                             }}
                             title="Buat transaksi pembatalan / koreksi"
-                            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-[#73796C] hover:text-[#C44750] hover:bg-[#FCECEF] rounded-full transition-colors"
+                            className="font-display inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold text-[#6F7B68] hover:text-[#D13447] hover:bg-[#D13447]/10 rounded-full transition-colors cursor-pointer"
                           >
                             <RotateCcw className="w-3 h-3" />
                             <span>Koreksi</span>
@@ -264,7 +271,7 @@ export function PointsPage({ onToast }: PointsPageProps) {
               </table>
             </div>
 
-            <div className="px-5 py-4 border-t border-[#DDE6C9] flex items-center justify-between text-xs text-[#73796C]">
+            <div className="px-5 py-4 border-t border-[#D5E4B6] flex items-center justify-between text-xs text-[#6F7B68]">
               <span className="tabular-nums font-medium">
                 Halaman {page} dari {totalPages}
               </span>
@@ -273,7 +280,7 @@ export function PointsPage({ onToast }: PointsPageProps) {
                   type="button"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
-                  className="p-2 rounded-full border border-[#DDE6C9] bg-white disabled:opacity-40 hover:border-[#B5D45D]"
+                  className="p-2 rounded-full border border-[#D5E4B6] bg-white disabled:opacity-40 hover:border-[#B5D45D] cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -281,7 +288,7 @@ export function PointsPage({ onToast }: PointsPageProps) {
                   type="button"
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="p-2 rounded-full border border-[#DDE6C9] bg-white disabled:opacity-40 hover:border-[#B5D45D]"
+                  className="p-2 rounded-full border border-[#D5E4B6] bg-white disabled:opacity-40 hover:border-[#B5D45D] cursor-pointer"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -300,7 +307,7 @@ export function PointsPage({ onToast }: PointsPageProps) {
       >
         <form onSubmit={handleAwardSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Target Penerima
             </label>
             <Select
@@ -325,7 +332,7 @@ export function PointsPage({ onToast }: PointsPageProps) {
 
           {targetType === 'single' && (
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                 Pilih Mahasiswa
               </label>
               <Select
@@ -344,10 +351,10 @@ export function PointsPage({ onToast }: PointsPageProps) {
 
           {targetType === 'selected' && (
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                 Pilih Mahasiswa ({selectedIds.length} dipilih)
               </label>
-              <div className="max-h-36 overflow-y-auto border border-[#DDE6C9] rounded-2xl p-3 space-y-2 bg-[#F0F8E0]/40">
+              <div className="max-h-36 overflow-y-auto border border-[#D5E4B6] rounded-[16px] p-3 space-y-2 bg-[#F0F8DF]/50">
                 {students.map((s) => {
                   const checked = selectedIds.includes(s.id);
                   return (
@@ -361,8 +368,8 @@ export function PointsPage({ onToast }: PointsPageProps) {
                           )
                         }
                       />
-                      <span className="tabular-nums text-[#73796C]">{s.nim}</span>
-                      <span className="font-semibold text-[#181A17]">{s.full_name}</span>
+                      <span className="tabular-nums text-[#6F7B68]">{s.nim}</span>
+                      <span className="font-semibold text-[#20251D]">{s.full_name}</span>
                     </label>
                   );
                 })}
@@ -372,7 +379,7 @@ export function PointsPage({ onToast }: PointsPageProps) {
 
           {targetType === 'class' && (
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Pilih Kelas</label>
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Pilih Kelas</label>
               <Select
                 value={selectedIds[0] ?? ''}
                 onChange={(e) => setSelectedIds([e.target.value])}
@@ -389,7 +396,7 @@ export function PointsPage({ onToast }: PointsPageProps) {
 
           {targetType === 'study_program' && (
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                 Pilih Program Studi
               </label>
               <Select
@@ -408,7 +415,7 @@ export function PointsPage({ onToast }: PointsPageProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                 Sumber Poin
               </label>
               <Select
@@ -423,7 +430,7 @@ export function PointsPage({ onToast }: PointsPageProps) {
               </Select>
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                 Jumlah Poin
               </label>
               <Input
@@ -437,7 +444,7 @@ export function PointsPage({ onToast }: PointsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Keterangan</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Keterangan</label>
             <Input
               type="text"
               required
@@ -472,16 +479,16 @@ export function PointsPage({ onToast }: PointsPageProps) {
         onClose={() => setAdjustTarget(null)}
       >
         <form onSubmit={handleAdjustSubmit} className="space-y-4">
-          <p className="text-xs text-[#73796C] leading-relaxed">
+          <p className="text-xs text-[#4E5849] leading-relaxed">
             Riwayat asli tetap tersimpan untuk kebutuhan audit. Sistem akan membuat transaksi
             penyesuaian baru sebesar{' '}
-            <span className="font-bold text-[#181A17] tabular-nums">
+            <span className="font-bold text-[#20251D] tabular-nums">
               {adjustTarget ? -adjustTarget.amount : 0} poin
             </span>
             .
           </p>
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Alasan Koreksi
             </label>
             <Input

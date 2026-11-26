@@ -1,34 +1,135 @@
 @import "tailwindcss";
 
 @theme {
+  /* Breakpoints: Mobile <600px | Tablet 600px–839px | Desktop >=840px */
+  --breakpoint-tablet: 600px;
+  --breakpoint-desktop: 840px;
+
+  /* Typography */
   --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
-  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
-  --color-canvas: #F0F8E0;
+  --font-sans: "Inter", "Plus Jakarta Sans", system-ui, sans-serif;
+
+  /* Master Color Palette */
   --color-lime-primary: #B5D45D;
-  --color-green-soft: #DBECB8;
-  --color-charcoal: #181A17;
-  --color-secondary: #73796C;
-  --color-border-soft: #DDE6C9;
-  --color-alert-soft: #FCECEF;
-  --color-success: #3D914C;
-  --color-danger: #C44750;
-  --color-warning: #D8A33D;
+  --color-lime-hover: #C5E370;
+  --color-secondary-mint: #DCECB8;
+  --color-canvas: #F0F8DF;
+  --color-surface: #FFFFFF;
+  --color-dark-card: #171A17;
+  --color-dark-elevated: #232822;
+  --color-dark-obsidian: #101210;
+  --color-text-primary: #20251D;
+  --color-text-secondary: #4E5849;
+  --color-text-subtle: #6F7B68;
+  --color-border-soft: #D5E4B6;
+  --color-success: #3E7B27;
+  --color-warning: #C27C0A;
+  --color-error: #D13447;
+  --color-streak-flame: #FF7A1A;
 }
 
 @layer base {
-  body {
-    font-family: var(--font-sans);
-    background-color: #F0F8E0;
-    color: #181A17;
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  body {
+    font-family: var(--font-sans);
+    background-color: #F0F8DF;
+    color: #20251D;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6, button {
     font-family: var(--font-display);
   }
 }
 
+.font-display {
+  font-family: var(--font-display);
+}
+
 .tabular-nums {
   font-variant-numeric: tabular-nums;
+}
+
+/* Custom sleek scrollbar for dark sidebar & data tables */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #D5E4B6;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B5D45D;
+}
+
+/* Lightweight editorial micro-interactions */
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-page-enter {
+  animation: page-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.animate-modal-enter {
+  animation: modal-enter 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-toast-enter {
+  animation: toast-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(220%);
+  }
+}
+
+.animate-progress-indeterminate {
+  animation: progress-indeterminate 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
 @keyframes flame-flicker {
@@ -36,16 +137,23 @@
     transform: translateY(0) scale(1);
   }
   50% {
-    transform: translateY(-2px) scale(1.08);
+    transform: translateY(-2px) scale(1.06);
   }
 }
 
 .animate-flame {
-  animation: flame-flicker 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  animation: flame-flicker 2.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-page-enter,
+  .animate-modal-enter,
+  .animate-toast-enter,
+  .animate-progress-indeterminate,
   .animate-flame {
-    animation: none;
+    animation: none !important;
   }
 }

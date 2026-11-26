@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { CalendarCheck, Save, CheckCircle2, Clock, XCircle, Percent } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
-import { Card, StatCard, Button, Input, Select, SearchBar } from '../components/ui/DesignSystem.tsx';
+import {
+  Card,
+  StatCard,
+  Button,
+  Input,
+  Select,
+  SearchBar,
+  PageHeader,
+} from '../components/ui/DesignSystem.tsx';
 import { AttendanceStatusIndicator, StudentStatusIndicator } from '../components/ui/StatusBadge.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
 import type { AttendanceStatus, AuthUser, StudentStatus } from '../types/index.ts';
@@ -164,14 +172,12 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
   if (!isAdmin) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[#181A17] tracking-tight">Riwayat Absensi</h1>
-          <p className="text-sm text-[#73796C] mt-1">
-            Ringkasan kehadiran kelas Anda beserta poin akademik yang tercatat dari setiap pertemuan.
-          </p>
-        </div>
+        <PageHeader
+          title="Riwayat Absensi"
+          description="Ringkasan kehadiran kelas Anda beserta poin akademik yang tercatat dari setiap pertemuan."
+        />
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 desktop:grid-cols-4 gap-4">
           <StatCard
             label="Tingkat Kehadiran"
             value={`${studentSummary.rate}%`}
@@ -183,26 +189,26 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
             label="Hadir"
             value={studentSummary.hadir}
             sublabel="Pertemuan hadir penuh"
-            icon={<CheckCircle2 className="w-5 h-5" />}
+            icon={<CheckCircle2 className="w-5 h-5 text-[#3E7B27]" />}
           />
           <StatCard
             label="Izin & Sakit"
             value={studentSummary.izin + studentSummary.sakit}
             sublabel={`${studentSummary.izin} Izin · ${studentSummary.sakit} Sakit`}
-            icon={<Clock className="w-5 h-5" />}
+            icon={<Clock className="w-5 h-5 text-[#C27C0A]" />}
           />
           <StatCard
             label="Alpha"
             value={studentSummary.alpha}
             sublabel="Tanpa keterangan"
-            icon={<XCircle className="w-5 h-5" />}
+            icon={<XCircle className="w-5 h-5 text-[#D13447]" />}
           />
         </div>
 
         <Card className="p-0 overflow-hidden">
-          <div className="px-6 py-5 border-b border-[#DDE6C9] flex items-center gap-2">
-            <CalendarCheck className="w-4 h-4 text-[#3D914C]" />
-            <h2 className="text-base font-bold text-[#181A17]">Log Pertemuan</h2>
+          <div className="px-6 py-5 border-b border-[#D5E4B6] flex items-center gap-2">
+            <CalendarCheck className="w-4 h-4 text-[#3E7B27]" />
+            <h2 className="font-display text-base font-bold text-[#20251D]">Log Pertemuan</h2>
           </div>
 
           {loading ? (
@@ -210,14 +216,14 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
               <TableSkeleton rows={5} />
             </div>
           ) : studentRecords.length === 0 ? (
-            <div className="p-12 text-center text-sm text-[#73796C]">
+            <div className="p-12 text-center text-sm text-[#6F7B68]">
               Belum ada catatan absensi untuk kelas Anda.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
+                  <tr className="border-b border-[#D5E4B6] bg-[#F0F8DF]/70 text-xs font-semibold text-[#6F7B68]">
                     <th className="py-3.5 px-5">Pertemuan</th>
                     <th className="py-3.5 px-5">Tanggal</th>
                     <th className="py-3.5 px-5">Kelas</th>
@@ -225,15 +231,15 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
                     <th className="py-3.5 px-5 text-right">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DDE6C9]/60">
+                <tbody className="divide-y divide-[#D5E4B6]/70">
                   {studentRecords.map((r) => (
-                    <tr key={r.id} className="hover:bg-[#F0F8E0]/50 transition-colors">
-                      <td className="py-3.5 px-5 font-bold text-[#181A17] tabular-nums">
+                    <tr key={r.id} className="hover:bg-[#F0F8DF]/50 transition-colors">
+                      <td className="py-3.5 px-5 font-display font-bold text-[#20251D] tabular-nums">
                         Pertemuan {r.meeting_number}
                       </td>
-                      <td className="py-3.5 px-5 text-[#73796C] tabular-nums">{r.attendance_date}</td>
-                      <td className="py-3.5 px-5 text-[#181A17]">{r.class_name}</td>
-                      <td className="py-3.5 px-5 text-xs text-[#73796C] capitalize">{r.source}</td>
+                      <td className="py-3.5 px-5 text-[#6F7B68] tabular-nums">{r.attendance_date}</td>
+                      <td className="py-3.5 px-5 text-[#20251D]">{r.class_name}</td>
+                      <td className="py-3.5 px-5 text-xs text-[#6F7B68] capitalize">{r.source}</td>
                       <td className="py-3.5 px-5 text-right">
                         <AttendanceStatusIndicator status={r.status} />
                       </td>
@@ -254,17 +260,15 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#181A17] tracking-tight">Absensi Kelas Manual</h1>
-        <p className="text-sm text-[#73796C] mt-1">
-          Mahasiswa berstatus Aktif (Netral) maupun Lulus (Hijau) tetap tersedia di daftar absen agar lulusan yang masih mengikuti kelas tetap dapat diabsen.
-        </p>
-      </div>
+      <PageHeader
+        title="Absensi Kelas Manual"
+        description="Mahasiswa berstatus Aktif (Netral) maupun Lulus (Hijau) tetap tersedia di daftar absen agar lulusan yang masih mengikuti kelas tetap dapat diabsen."
+      />
 
       {/* Controls */}
-      <Card className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Card className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-4 gap-4">
         <div>
-          <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Program Studi</label>
+          <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Program Studi</label>
           <Select
             value={studyProgramId}
             onChange={(e) => {
@@ -285,7 +289,7 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Kelas</label>
+          <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Kelas</label>
           <Select value={classId} onChange={(e) => setClassId(e.target.value)} className="w-full">
             <option value="">Pilih Kelas</option>
             {filteredClasses.map((c) => (
@@ -297,7 +301,7 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Tanggal</label>
+          <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Tanggal</label>
           <Input
             type="date"
             value={attendanceDate}
@@ -306,7 +310,7 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Pertemuan Ke-</label>
+          <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Pertemuan Ke-</label>
           <Input
             type="number"
             min={1}
@@ -319,17 +323,17 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
 
       {/* Checklist Table */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-6 py-5 border-b border-[#DDE6C9] space-y-4">
+        <div className="px-6 py-5 border-b border-[#D5E4B6] space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <CalendarCheck className="w-4 h-4 text-[#3D914C]" />
-                <span className="text-base font-bold text-[#181A17]">
+                <CalendarCheck className="w-4 h-4 text-[#3E7B27]" />
+                <span className="font-display text-base font-bold text-[#20251D]">
                   Checklist Kehadiran ({visibleRoster.length} Mahasiswa)
                 </span>
               </div>
               {classId && (
-                <p className="text-xs text-[#73796C] mt-1 tabular-nums">
+                <p className="text-xs text-[#6F7B68] mt-1 tabular-nums">
                   Aktif: {counts.netral} · Lulus (Hijau): {counts.hijau}
                   {counts.merah > 0 &&
                     ` · AFK (Merah): ${counts.merah} ${includeAfk ? '(ditampilkan)' : '(disembunyikan)'}`}
@@ -354,10 +358,10 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
                 value={searchQuery}
                 onChange={setSearchQuery}
                 placeholder="Cari NIM atau nama..."
-                className="w-56"
+                className="w-full tablet:w-56"
               />
 
-              <div className="flex items-center p-1 bg-[#F0F8E0]/60 border border-[#DDE6C9] rounded-full">
+              <div className="flex items-center p-1 bg-[#F0F8DF] border border-[#D5E4B6] rounded-full">
                 {[
                   { id: 'all', label: 'Semua' },
                   { id: 'netral', label: 'Aktif' },
@@ -367,10 +371,10 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
                     key={opt.id}
                     type="button"
                     onClick={() => setStatusFilter(opt.id as 'all' | 'netral' | 'hijau')}
-                    className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors whitespace-nowrap ${
+                    className={`font-display px-3 py-1 text-xs font-semibold rounded-full transition-colors whitespace-nowrap cursor-pointer ${
                       statusFilter === opt.id
-                        ? 'bg-[#181A17] text-white'
-                        : 'text-[#73796C] hover:text-[#181A17]'
+                        ? 'bg-[#171A17] text-[#B5D45D]'
+                        : 'text-[#4E5849] hover:text-[#20251D]'
                     }`}
                   >
                     {opt.label}
@@ -379,12 +383,12 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
               </div>
             </div>
 
-            <label className="inline-flex items-center gap-2 text-xs font-semibold text-[#181A17] cursor-pointer select-none px-3.5 py-2 rounded-full bg-[#F0F8E0]/60 border border-[#DDE6C9] hover:border-[#B5D45D] transition-colors">
+            <label className="inline-flex items-center gap-2 text-xs font-semibold text-[#20251D] cursor-pointer select-none px-3.5 py-2 rounded-full bg-[#F0F8DF] border border-[#D5E4B6] hover:border-[#B5D45D] transition-colors">
               <input
                 type="checkbox"
                 checked={includeAfk}
                 onChange={(e) => setIncludeAfk(e.target.checked)}
-                className="accent-[#181A17] w-3.5 h-3.5 rounded cursor-pointer"
+                className="accent-[#171A17] w-3.5 h-3.5 rounded cursor-pointer"
               />
               <span>Tampilkan juga Mahasiswa AFK / Merah ({counts.merah})</span>
             </label>
@@ -396,20 +400,20 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
             <TableSkeleton rows={5} />
           </div>
         ) : roster.length === 0 ? (
-          <div className="p-12 text-center text-sm text-[#73796C]">
+          <div className="p-12 text-center text-sm text-[#6F7B68]">
             {classId && counts.merah > 0 && !includeAfk
               ? 'Semua mahasiswa di kelas ini berstatus AFK (Merah). Centang "Tampilkan juga Mahasiswa AFK / Merah" untuk menampilkannya.'
               : 'Pilih kelas yang memiliki mahasiswa untuk mengisi absensi.'}
           </div>
         ) : visibleRoster.length === 0 ? (
-          <div className="p-12 text-center text-sm text-[#73796C]">
+          <div className="p-12 text-center text-sm text-[#6F7B68]">
             Tidak ada mahasiswa yang sesuai dengan filter atau pencarian.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
+                <tr className="border-b border-[#D5E4B6] bg-[#F0F8DF]/70 text-xs font-semibold text-[#6F7B68]">
                   <th className="py-3.5 px-5">NIM</th>
                   <th className="py-3.5 px-5">Nama Mahasiswa</th>
                   <th className="py-3.5 px-5">Status Mahasiswa</th>
@@ -417,19 +421,21 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
                   <th className="py-3.5 px-5">Status Kehadiran</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#DDE6C9]/60 text-sm">
+              <tbody className="divide-y divide-[#D5E4B6]/70 text-sm">
                 {visibleRoster.map((s) => {
                   const val = statuses[s.student_id] || 'hadir';
                   return (
-                    <tr key={s.student_id} className="hover:bg-[#F0F8E0]/50 transition-colors">
-                      <td className="py-3.5 px-5 text-xs font-semibold text-[#73796C] tabular-nums">
+                    <tr key={s.student_id} className="hover:bg-[#F0F8DF]/50 transition-colors">
+                      <td className="py-3.5 px-5 text-xs font-semibold text-[#6F7B68] tabular-nums">
                         {s.nim}
                       </td>
-                      <td className="py-3.5 px-5 font-bold text-[#181A17]">{s.full_name}</td>
+                      <td className="py-3.5 px-5 font-display font-bold text-[#20251D]">
+                        {s.full_name}
+                      </td>
                       <td className="py-3.5 px-5">
                         <StudentStatusIndicator status={(s.student_status as StudentStatus) || 'netral'} />
                       </td>
-                      <td className="py-3.5 px-5 text-xs text-[#73796C]">
+                      <td className="py-3.5 px-5 text-xs text-[#6F7B68]">
                         {s.attendance_status
                           ? `${s.attendance_status.toUpperCase()} (${s.source})`
                           : 'Belum dicatat'}
@@ -445,14 +451,14 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
                                 onClick={() =>
                                   setStatuses((prev) => ({ ...prev, [s.student_id]: st }))
                                 }
-                                className={`px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-colors capitalize ${
+                                className={`font-display px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-colors capitalize cursor-pointer ${
                                   active
                                     ? st === 'hadir'
-                                      ? 'bg-[#3D914C] text-white border-[#3D914C]'
+                                      ? 'bg-[#3E7B27] text-white border-[#3E7B27]'
                                       : st === 'alpha'
-                                        ? 'bg-[#C44750] text-white border-[#C44750]'
-                                        : 'bg-[#D8A33D] text-white border-[#D8A33D]'
-                                    : 'bg-white text-[#73796C] border-[#DDE6C9] hover:border-[#B5D45D] hover:text-[#181A17]'
+                                        ? 'bg-[#D13447] text-white border-[#D13447]'
+                                        : 'bg-[#C27C0A] text-white border-[#C27C0A]'
+                                    : 'bg-white text-[#4E5849] border-[#D5E4B6] hover:border-[#B5D45D] hover:text-[#20251D]'
                                 }`}
                               >
                                 {st}

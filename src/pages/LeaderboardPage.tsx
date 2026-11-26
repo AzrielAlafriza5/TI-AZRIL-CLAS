@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Trophy, Medal } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
-import { Card, Select } from '../components/ui/DesignSystem.tsx';
+import {
+  Card,
+  EmptyState,
+  PageHeader,
+  SegmentedControl,
+  Select,
+} from '../components/ui/DesignSystem.tsx';
 import { StudentStatusIndicator } from '../components/ui/StatusBadge.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
 import type { AuthUser, LeaderboardEntry } from '../types/index.ts';
@@ -68,100 +74,90 @@ export function LeaderboardPage({ user }: LeaderboardPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#181A17] tracking-tight">Leaderboard</h1>
-          <p className="text-sm text-[#73796C] mt-1">
-            Peringkat kelas dan program studi berdasarkan total Poin Akademik.
-          </p>
-        </div>
+      <PageHeader
+        title="Leaderboard"
+        description="Peringkat kelas dan program studi berdasarkan total Poin Akademik."
+        actions={
+          <div className="flex flex-wrap items-center gap-2.5">
+            <SegmentedControl
+              value={scope}
+              onChange={handleScopeSwitch}
+              options={[
+                { id: 'class', label: 'Ranking Kelas' },
+                { id: 'study_program', label: 'Ranking Program Studi' },
+              ]}
+            />
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center p-1 bg-white border border-[#DDE6C9] rounded-full">
+            <Select
+              value={targetId}
+              onChange={(e) => setTargetId(e.target.value)}
+              className="rounded-full py-2"
+            >
+              <option value="">{scope === 'class' ? 'Semua Kelas' : 'Semua Program Studi'}</option>
+              {scope === 'class'
+                ? classes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))
+                : programs.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+            </Select>
+          </div>
+        }
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex flex-wrap items-center gap-1 p-1.5 bg-white border border-[#D5E4B6] rounded-full">
+          {[
+            { id: 'weekly', label: 'Mingguan' },
+            { id: 'monthly', label: 'Bulanan' },
+            { id: 'semester', label: 'Semester' },
+            { id: 'all', label: 'Keseluruhan' },
+          ].map((p) => (
             <button
+              key={p.id}
               type="button"
-              onClick={() => handleScopeSwitch('class')}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${
-                scope === 'class' ? 'bg-[#181A17] text-white' : 'text-[#73796C] hover:text-[#181A17]'
+              onClick={() => setPeriod(p.id as any)}
+              className={`font-display px-4 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-all duration-150 cursor-pointer ${
+                period === p.id
+                  ? 'bg-[#B5D45D] text-[#171A17]'
+                  : 'text-[#4E5849] hover:text-[#20251D] hover:bg-[#F0F8DF]'
               }`}
             >
-              Ranking Kelas
+              {p.label}
             </button>
-            <button
-              type="button"
-              onClick={() => handleScopeSwitch('study_program')}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${
-                scope === 'study_program'
-                  ? 'bg-[#181A17] text-white'
-                  : 'text-[#73796C] hover:text-[#181A17]'
-              }`}
-            >
-              Ranking Program Studi
-            </button>
-          </div>
-
-          <Select
-            value={targetId}
-            onChange={(e) => setTargetId(e.target.value)}
-            className="rounded-full py-2"
-          >
-            <option value="">{scope === 'class' ? 'Semua Kelas' : 'Semua Program Studi'}</option>
-            {scope === 'class'
-              ? classes.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))
-              : programs.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-          </Select>
-
-          <div className="flex items-center p-1 bg-white border border-[#DDE6C9] rounded-full">
-            {[
-              { id: 'weekly', label: 'Mingguan' },
-              { id: 'monthly', label: 'Bulanan' },
-              { id: 'semester', label: 'Semester' },
-              { id: 'all', label: 'Keseluruhan' },
-            ].map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setPeriod(p.id as any)}
-                className={`px-3.5 py-1.5 text-xs font-semibold rounded-full whitespace-nowrap transition-colors ${
-                  period === p.id ? 'bg-[#B5D45D] text-[#181A17]' : 'text-[#73796C] hover:text-[#181A17]'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          ))}
         </div>
       </div>
 
       {myEntry && (
-        <Card variant="dark" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
+        <Card
+          variant="dark"
+          className="flex flex-col tablet:flex-row tablet:items-center justify-between gap-4"
+        >
+          <div className="min-w-0">
             <div className="text-xs font-semibold text-[#B5D45D]">Peringkat Anda Saat Ini</div>
-            <div className="text-xl font-bold mt-1">
+            <div className="font-display text-xl font-bold text-white mt-1 truncate">
               Peringkat #{myEntry.rank} · {myEntry.full_name}
             </div>
-            <div className="text-xs text-[#DBECB8] mt-0.5">
+            <div className="text-xs text-[#DCECB8]/80 mt-0.5 truncate">
               {myEntry.class_name} · {myEntry.study_program_name}
             </div>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 shrink-0">
             <div>
-              <div className="text-xs text-[#DBECB8]">Poin Periode</div>
-              <div className="text-2xl font-bold text-[#B5D45D] tabular-nums">
+              <div className="text-xs text-[#DCECB8]/75">Poin Periode</div>
+              <div className="font-display text-2xl font-bold text-[#B5D45D] tabular-nums">
                 {myEntry.period_points}
               </div>
             </div>
-            <div>
-              <div className="text-xs text-[#DBECB8]">EXP / Level</div>
-              <div className="text-lg font-bold tabular-nums">
+            <div className="pl-6 border-l border-[#232822]">
+              <div className="text-xs text-[#DCECB8]/75">EXP / Level</div>
+              <div className="font-display text-lg font-bold text-white tabular-nums">
                 {myEntry.total_exp} · Lv.{myEntry.current_level}
               </div>
             </div>
@@ -172,48 +168,70 @@ export function LeaderboardPage({ user }: LeaderboardPageProps) {
       {loading ? (
         <TableSkeleton rows={6} />
       ) : entries.length === 0 ? (
-        <Card className="p-12 text-center">
-          <Trophy className="w-8 h-8 text-[#73796C] mx-auto mb-3" />
-          <p className="text-sm text-[#73796C]">Belum ada mahasiswa pada leaderboard ini.</p>
-        </Card>
+        <EmptyState
+          icon={<Trophy className="w-6 h-6" />}
+          title="Belum ada data peringkat"
+          description="Belum ada mahasiswa pada filter kelas, program studi, atau periode ini."
+        />
       ) : (
         <>
           {/* Top 3 Podium */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4 items-end">
             {podium.map((entry) => {
               const isFirst = entry.rank === 1;
               return (
                 <Card
                   key={entry.student_id}
-                  variant={isFirst ? 'soft' : 'white'}
+                  variant={isFirst ? 'dark' : 'white'}
                   className={`text-center ${
                     isFirst
-                      ? 'md:order-2 md:py-8 border-[#B5D45D]'
+                      ? 'tablet:order-2 tablet:py-8 border-[#232822]'
                       : entry.rank === 2
-                        ? 'md:order-1'
-                        : 'md:order-3'
+                        ? 'tablet:order-1 border-[#B5D45D]'
+                        : 'tablet:order-3'
                   }`}
                 >
                   <div
-                    className={`w-12 h-12 rounded-full mx-auto flex items-center justify-center ${
+                    className={`w-12 h-12 rounded-2xl mx-auto flex items-center justify-center ${
                       isFirst
-                        ? 'bg-[#181A17] text-[#B5D45D]'
+                        ? 'bg-[#B5D45D] text-[#171A17]'
                         : entry.rank === 2
-                          ? 'bg-[#DBECB8] text-[#181A17]'
-                          : 'bg-[#D8A33D]/20 text-[#D8A33D]'
+                          ? 'bg-[#DCECB8] text-[#20251D]'
+                          : 'bg-[#FF7A1A]/15 text-[#FF7A1A]'
                     }`}
                   >
                     {isFirst ? <Trophy className="w-5 h-5" /> : <Medal className="w-5 h-5" />}
                   </div>
-                  <div className="text-xs font-bold text-[#73796C] mt-3">
+                  <div
+                    className={`font-display text-xs font-bold mt-3 ${
+                      isFirst ? 'text-[#B5D45D]' : 'text-[#6F7B68]'
+                    }`}
+                  >
                     PERINGKAT #{entry.rank}
                   </div>
-                  <div className="text-base font-bold text-[#181A17] mt-1 truncate">
+                  <div
+                    className={`font-display text-base font-bold mt-1 truncate ${
+                      isFirst ? 'text-white' : 'text-[#20251D]'
+                    }`}
+                  >
                     {entry.full_name}
                   </div>
-                  <div className="text-xs text-[#73796C] mt-0.5">{entry.class_name}</div>
-                  <div className="text-3xl font-bold text-[#181A17] tabular-nums mt-3">
-                    {entry.period_points} <span className="text-xs font-semibold text-[#73796C]">Poin</span>
+                  <div className={`text-xs mt-0.5 ${isFirst ? 'text-[#DCECB8]/75' : 'text-[#6F7B68]'}`}>
+                    {entry.class_name}
+                  </div>
+                  <div
+                    className={`font-display text-3xl font-bold tabular-nums mt-3 ${
+                      isFirst ? 'text-[#B5D45D]' : 'text-[#20251D]'
+                    }`}
+                  >
+                    {entry.period_points}{' '}
+                    <span
+                      className={`text-xs font-semibold ${
+                        isFirst ? 'text-[#DCECB8]/70' : 'text-[#6F7B68]'
+                      }`}
+                    >
+                      Poin
+                    </span>
                   </div>
                   <div className="mt-3 flex justify-center">
                     <StudentStatusIndicator status={entry.status} />
@@ -228,48 +246,53 @@ export function LeaderboardPage({ user }: LeaderboardPageProps) {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
+                  <tr className="border-b border-[#D5E4B6] bg-[#F0F8DF]/70 text-xs font-semibold text-[#6F7B68]">
                     <th className="py-3.5 px-5">Ranking</th>
                     <th className="py-3.5 px-5">Nama Mahasiswa</th>
-                    <th className="py-3.5 px-5">Kelas</th>
+                    <th className="py-3.5 px-5 hidden tablet:table-cell">Kelas</th>
                     <th className="py-3.5 px-5">Status</th>
                     <th className="py-3.5 px-5 text-right">Total Poin</th>
-                    <th className="py-3.5 px-5 text-right">EXP / Level</th>
+                    <th className="py-3.5 px-5 text-right hidden tablet:table-cell">EXP / Level</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DDE6C9]/60">
+                <tbody className="divide-y divide-[#D5E4B6]/60">
                   {entries.map((e) => {
                     const isMe = user.student?.id === e.student_id;
                     return (
                       <tr
                         key={e.student_id}
-                        className={isMe ? 'bg-[#DBECB8]/50' : 'hover:bg-[#F0F8E0]/50 transition-colors'}
+                        className={
+                          isMe ? 'bg-[#DCECB8]/55' : 'hover:bg-[#F0F8DF]/60 transition-colors'
+                        }
                       >
-                        <td className="py-3.5 px-5 font-bold text-[#181A17] tabular-nums">
+                        <td className="py-3.5 px-5 font-display font-bold text-[#20251D] tabular-nums">
                           #{e.rank}
                         </td>
                         <td className="py-3.5 px-5">
-                          <div className="font-bold text-[#181A17]">
+                          <div className="font-display font-bold text-[#20251D]">
                             {e.full_name}{' '}
                             {isMe && (
-                              <span className="ml-1.5 px-2 py-0.5 rounded-full bg-[#B5D45D] text-[#181A17] text-[10px] font-bold">
+                              <span className="ml-1.5 px-2 py-0.5 rounded-full bg-[#B5D45D] text-[#171A17] text-[10px] font-bold">
                                 Anda
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-[#73796C] tabular-nums">NIM {e.nim}</div>
+                          <div className="text-xs text-[#6F7B68] tabular-nums">
+                            NIM {e.nim}
+                            <span className="tablet:hidden"> · {e.class_name}</span>
+                          </div>
                         </td>
-                        <td className="py-3.5 px-5 text-xs text-[#73796C]">
-                          <div className="font-semibold text-[#181A17]">{e.class_name}</div>
+                        <td className="py-3.5 px-5 text-xs text-[#6F7B68] hidden tablet:table-cell">
+                          <div className="font-semibold text-[#20251D]">{e.class_name}</div>
                           <div>{e.study_program_name}</div>
                         </td>
                         <td className="py-3.5 px-5">
                           <StudentStatusIndicator status={e.status} />
                         </td>
-                        <td className="py-3.5 px-5 text-right font-bold text-[#181A17] tabular-nums">
+                        <td className="py-3.5 px-5 text-right font-display font-bold text-[#20251D] tabular-nums">
                           {e.period_points}
                         </td>
-                        <td className="py-3.5 px-5 text-right text-xs tabular-nums text-[#73796C]">
+                        <td className="py-3.5 px-5 text-right text-xs tabular-nums text-[#4E5849] hidden tablet:table-cell">
                           {e.total_exp} EXP · Lv.{e.current_level}
                         </td>
                       </tr>

@@ -11,7 +11,16 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
-import { Card, Button, Input, Select, Textarea, ProgressBar } from '../components/ui/DesignSystem.tsx';
+import {
+  Card,
+  Button,
+  Input,
+  Select,
+  Textarea,
+  ProgressBar,
+  PageHeader,
+  EmptyState,
+} from '../components/ui/DesignSystem.tsx';
 import { Modal, ConfirmDialog } from '../components/ui/Modal.tsx';
 import { MaterialStatusIndicator } from '../components/ui/StatusBadge.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
@@ -196,18 +205,15 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#181A17] tracking-tight">Materi Pembelajaran</h1>
-          <p className="text-sm text-[#73796C] mt-1">
-            {isAdmin
-              ? 'Kelola modul Google Drive terurut berdasarkan pertemuan dan kelas penerima.'
-              : `Kelas ${user.student?.class_name ?? ''} · Pelajari materi secara berurutan dan tandai progres Anda.`}
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          {isAdmin && (
+      <PageHeader
+        title="Materi Pembelajaran"
+        description={
+          isAdmin
+            ? 'Kelola modul Google Drive terurut berdasarkan pertemuan dan kelas penerima.'
+            : `Kelas ${user.student?.class_name ?? ''} · Pelajari materi secara berurutan dan tandai progres Anda.`
+        }
+        actions={
+          isAdmin ? (
             <>
               <Select
                 value={filterClassId}
@@ -226,21 +232,21 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
                 <span>Tambah Materi</span>
               </Button>
             </>
-          )}
-        </div>
-      </div>
+          ) : undefined
+        }
+      />
 
       {/* Student Progress Bar */}
       {!isAdmin && (
         <Card variant="soft">
-          <div className="flex items-center justify-between text-sm font-bold text-[#181A17] mb-3">
+          <div className="flex items-center justify-between text-sm font-display font-bold text-[#20251D] mb-3">
             <span>Progres Penyelesaian Materi</span>
-            <span className="tabular-nums text-[#3D914C]">
+            <span className="tabular-nums text-[#3E7B27]">
               {progressSummary.completed} / {progressSummary.total} Selesai ({progressSummary.percent}%)
             </span>
           </div>
           <ProgressBar percent={progressSummary.percent} height="h-3" trackClass="bg-white" />
-          <p className="text-xs text-[#73796C] mt-2.5">
+          <p className="text-xs text-[#4E5849] mt-2.5">
             Membuka link Google Drive tidak otomatis menandai materi selesai. Gunakan pilihan status setelah mempelajari materi.
           </p>
         </Card>
@@ -249,26 +255,31 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
       {loading ? (
         <TableSkeleton rows={6} />
       ) : materials.length === 0 ? (
-        <Card className="p-12 text-center">
-          <BookOpen className="w-8 h-8 text-[#73796C] mx-auto mb-3" />
-          <p className="text-sm text-[#73796C]">Belum ada materi pembelajaran tersedia.</p>
-        </Card>
+        <EmptyState
+          icon={<BookOpen className="w-5 h-5" />}
+          title="Belum ada materi pembelajaran"
+          description={
+            isAdmin
+              ? 'Klik "Tambah Materi" untuk membagikan modul Google Drive ke kelas aktif.'
+              : 'Materi dari administrator akan muncul di sini.'
+          }
+        />
       ) : (
-        <Card className="p-0 overflow-hidden divide-y divide-[#DDE6C9]/70">
+        <Card className="p-0 overflow-hidden divide-y divide-[#D5E4B6]/70">
           {materials.map((m, idx) => (
             <div
               key={m.id}
-              className={`p-5 sm:px-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
-                !m.is_published ? 'bg-[#F0F8E0]/50 opacity-80' : ''
+              className={`p-5 tablet:px-6 flex flex-col desktop:flex-row desktop:items-center justify-between gap-4 ${
+                !m.is_published ? 'bg-[#F0F8DF]/55 opacity-85' : ''
               }`}
             >
               <div className="flex items-start gap-4 min-w-0 flex-1">
-                <div className="w-11 h-11 rounded-2xl bg-[#DBECB8] text-[#181A17] font-bold text-sm flex items-center justify-center shrink-0 tabular-nums">
+                <div className="w-11 h-11 rounded-2xl bg-[#DCECB8] text-[#20251D] font-display font-bold text-sm flex items-center justify-center shrink-0 tabular-nums">
                   {String(m.order_index).padStart(2, '0')}
                 </div>
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-[#73796C]">
-                    <span className="font-bold text-[#3D914C]">{m.topic}</span>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-[#6F7B68]">
+                    <span className="font-bold text-[#3E7B27]">{m.topic}</span>
                     <span aria-hidden="true">·</span>
                     <span className="tabular-nums">{m.published_at}</span>
                     <span aria-hidden="true">·</span>
@@ -276,14 +287,14 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
                     {!m.is_published && (
                       <>
                         <span aria-hidden="true">·</span>
-                        <span className="font-bold text-[#D8A33D]">Disembunyikan</span>
+                        <span className="font-bold text-[#C27C0A]">Disembunyikan</span>
                       </>
                     )}
                   </div>
-                  <h2 className="text-base font-bold text-[#181A17] mt-1">
+                  <h2 className="font-display text-base font-bold text-[#20251D] mt-1">
                     {String(m.order_index).padStart(2, '0')}. {m.title}
                   </h2>
-                  {m.description && <p className="text-sm text-[#73796C] mt-0.5">{m.description}</p>}
+                  {m.description && <p className="text-sm text-[#4E5849] mt-0.5">{m.description}</p>}
                 </div>
               </div>
 
@@ -292,7 +303,7 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
                   href={m.drive_url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full bg-[#B5D45D] text-[#181A17] hover:bg-[#a7c84d] whitespace-nowrap transition-colors"
+                  className="font-display inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-full bg-[#B5D45D] text-[#171A17] hover:bg-[#C5E370] whitespace-nowrap transition-colors"
                 >
                   <span>Buka Google Drive</span>
                   <ExternalLink className="w-3.5 h-3.5" />
@@ -304,7 +315,7 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
                       type="button"
                       disabled={idx === 0}
                       onClick={() => handleReorder(idx, -1)}
-                      className="p-2 rounded-full text-[#73796C] hover:text-[#181A17] hover:bg-[#F0F8E0] disabled:opacity-30"
+                      className="p-2 rounded-full text-[#6F7B68] hover:text-[#20251D] hover:bg-[#F0F8DF] disabled:opacity-30 cursor-pointer"
                       title="Naikkan urutan"
                     >
                       <ArrowUp className="w-4 h-4" />
@@ -313,7 +324,7 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
                       type="button"
                       disabled={idx === materials.length - 1}
                       onClick={() => handleReorder(idx, 1)}
-                      className="p-2 rounded-full text-[#73796C] hover:text-[#181A17] hover:bg-[#F0F8E0] disabled:opacity-30"
+                      className="p-2 rounded-full text-[#6F7B68] hover:text-[#20251D] hover:bg-[#F0F8DF] disabled:opacity-30 cursor-pointer"
                       title="Turunkan urutan"
                     >
                       <ArrowDown className="w-4 h-4" />
@@ -321,7 +332,7 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
                     <button
                       type="button"
                       onClick={() => handleTogglePublish(m)}
-                      className="p-2 rounded-full text-[#73796C] hover:text-[#181A17] hover:bg-[#F0F8E0]"
+                      className="p-2 rounded-full text-[#6F7B68] hover:text-[#20251D] hover:bg-[#F0F8DF] cursor-pointer"
                       title={m.is_published ? 'Sembunyikan materi' : 'Publikasikan materi'}
                     >
                       {m.is_published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -329,7 +340,7 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
                     <button
                       type="button"
                       onClick={() => openEditModal(m)}
-                      className="p-2 rounded-full text-[#73796C] hover:text-[#181A17] hover:bg-[#F0F8E0]"
+                      className="p-2 rounded-full text-[#6F7B68] hover:text-[#20251D] hover:bg-[#F0F8DF] cursor-pointer"
                       title="Edit materi"
                     >
                       <Pencil className="w-4 h-4" />
@@ -337,7 +348,7 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
                     <button
                       type="button"
                       onClick={() => setDeleteTarget(m)}
-                      className="p-2 rounded-full text-[#73796C] hover:text-[#C44750] hover:bg-[#FCECEF]"
+                      className="p-2 rounded-full text-[#6F7B68] hover:text-[#D13447] hover:bg-[#D13447]/10 cursor-pointer"
                       title="Hapus materi"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -374,9 +385,9 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
         maxWidthClass="max-w-xl"
       >
         <form onSubmit={handleSaveMaterial} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Urutan</label>
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Urutan</label>
               <Input
                 type="number"
                 min={1}
@@ -388,8 +399,8 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
                 className="tabular-nums"
               />
             </div>
-            <div className="sm:col-span-3">
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <div className="tablet:col-span-3">
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                 Judul Materi
               </label>
               <Input
@@ -402,9 +413,9 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                 Mata Kuliah / Topik
               </label>
               <Input
@@ -415,7 +426,7 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                 Tanggal Publikasi
               </label>
               <Input
@@ -428,7 +439,7 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Link Google Drive
             </label>
             <Input
@@ -441,7 +452,7 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Deskripsi</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Deskripsi</label>
             <Textarea
               rows={2}
               value={formState.description}
@@ -450,10 +461,10 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-2">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-2">
               Kelas Penerima
             </label>
-            <div className="max-h-32 overflow-y-auto border border-[#DDE6C9] rounded-2xl p-3 space-y-2 bg-[#F0F8E0]/40">
+            <div className="max-h-32 overflow-y-auto border border-[#D5E4B6] rounded-[16px] p-3 space-y-2 bg-[#F0F8DF]/50">
               {classes.map((c) => {
                 const checked = formState.class_ids.includes(c.id);
                 return (
@@ -470,9 +481,9 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
                         }));
                       }}
                     />
-                    <span className="font-medium text-[#181A17]">
+                    <span className="font-medium text-[#20251D]">
                       {c.name}{' '}
-                      <span className="text-xs text-[#73796C]">({c.study_program_name})</span>
+                      <span className="text-xs text-[#6F7B68]">({c.study_program_name})</span>
                     </span>
                   </label>
                 );
@@ -480,7 +491,7 @@ export function MaterialsPage({ user, onToast }: MaterialsPageProps) {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm font-medium text-[#181A17] cursor-pointer">
+          <label className="flex items-center gap-2 text-sm font-medium text-[#20251D] cursor-pointer">
             <input
               type="checkbox"
               checked={formState.is_published}

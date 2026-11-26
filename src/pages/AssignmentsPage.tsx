@@ -10,7 +10,15 @@ import {
   FileText,
 } from 'lucide-react';
 import { apiFetch, downloadProtectedFile, uploadFileToServer } from '../lib/api.ts';
-import { Card, Button, Input, Select, Textarea } from '../components/ui/DesignSystem.tsx';
+import {
+  Card,
+  Button,
+  Input,
+  Select,
+  Textarea,
+  PageHeader,
+  EmptyState,
+} from '../components/ui/DesignSystem.tsx';
 import { Modal, ConfirmDialog } from '../components/ui/Modal.tsx';
 import { SubmissionStatusIndicator } from '../components/ui/StatusBadge.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
@@ -205,77 +213,77 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#181A17] tracking-tight">
-            {isAdmin ? 'Manajemen Tugas & Penilaian' : 'Tugas & Pengumpulan'}
-          </h1>
-          <p className="text-sm text-[#73796C] mt-1">
-            {isAdmin
-              ? 'Buat tugas multi-kelas, periksa pengumpulan mahasiswa, dan berikan nilai serta poin akademik.'
-              : 'Lihat daftar tugas kelas Anda, unduh lampiran, dan kirim pengumpulan sebelum deadline.'}
-          </p>
-        </div>
-
-        {isAdmin && (
-          <Button
-            onClick={() => {
-              const tomorrow = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 16);
-              setFormState({
-                title: '',
-                description: '',
-                instructions: '',
-                deadline: tomorrow,
-                max_points: 100,
-                class_ids: classes[0] ? [classes[0].id] : [],
-                attachment_url: null,
-                attachment_name: null,
-              });
-              setCreateOpen(true);
-            }}
-            disabled={classes.length === 0}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Buat Tugas Baru</span>
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title={isAdmin ? 'Manajemen Tugas & Penilaian' : 'Tugas & Pengumpulan'}
+        description={
+          isAdmin
+            ? 'Buat tugas multi-kelas, periksa pengumpulan mahasiswa, dan berikan nilai serta poin akademik.'
+            : 'Lihat daftar tugas kelas Anda, unduh lampiran, dan kirim pengumpulan sebelum deadline.'
+        }
+        actions={
+          isAdmin ? (
+            <Button
+              onClick={() => {
+                const tomorrow = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 16);
+                setFormState({
+                  title: '',
+                  description: '',
+                  instructions: '',
+                  deadline: tomorrow,
+                  max_points: 100,
+                  class_ids: classes[0] ? [classes[0].id] : [],
+                  attachment_url: null,
+                  attachment_name: null,
+                });
+                setCreateOpen(true);
+              }}
+              disabled={classes.length === 0}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Buat Tugas Baru</span>
+            </Button>
+          ) : undefined
+        }
+      />
 
       {loading ? (
         <TableSkeleton rows={5} />
       ) : assignments.length === 0 ? (
-        <Card className="p-12 text-center">
-          <ClipboardList className="w-8 h-8 text-[#73796C] mx-auto mb-3" />
-          <p className="text-sm text-[#73796C]">
-            {isAdmin ? 'Belum ada tugas yang dibuat.' : 'Belum ada tugas untuk kelas Anda.'}
-          </p>
-        </Card>
+        <EmptyState
+          icon={<ClipboardList className="w-5 h-5" />}
+          title={isAdmin ? 'Belum ada tugas yang dibuat' : 'Belum ada tugas untuk kelas Anda'}
+          description={
+            isAdmin
+              ? 'Klik "Buat Tugas Baru" untuk mendistribusikan tugas ke kelas aktif.'
+              : 'Tugas baru dari administrator akan muncul di sini.'
+          }
+        />
       ) : (
         <div className="space-y-4">
           {assignments.map((a) => (
             <Card
               key={a.id}
-              className="flex flex-col lg:flex-row lg:items-center justify-between gap-5"
+              className="flex flex-col desktop:flex-row desktop:items-center justify-between gap-5 hover:border-[#B5D45D] transition-colors"
             >
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2 text-xs text-[#73796C]">
-                  <span className="px-2.5 py-0.5 rounded-full bg-[#DBECB8] font-bold text-[#181A17] tabular-nums">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[#6F7B68]">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#DCECB8] font-display font-bold text-[#20251D] tabular-nums">
                     Deadline {String(a.deadline).replace('T', ' ')}
                   </span>
                   <span aria-hidden="true">·</span>
-                  <span className="font-semibold text-[#3D914C] tabular-nums">
+                  <span className="font-semibold text-[#3E7B27] tabular-nums">
                     Maks {a.max_points} Poin
                   </span>
                   <span aria-hidden="true">·</span>
                   <span>{a.targets.map((t) => t.class_name).join(', ')}</span>
                 </div>
 
-                <h2 className="text-lg font-bold text-[#181A17] mt-2">{a.title}</h2>
+                <h2 className="font-display text-lg font-bold text-[#20251D] mt-2">{a.title}</h2>
                 {a.description && (
-                  <p className="text-sm text-[#73796C] mt-1 line-clamp-2">{a.description}</p>
+                  <p className="text-sm text-[#4E5849] mt-1 line-clamp-2">{a.description}</p>
                 )}
                 {a.instructions && (
-                  <p className="text-xs text-[#73796C] mt-1.5">Instruksi: {a.instructions}</p>
+                  <p className="text-xs text-[#6F7B68] mt-1.5">Instruksi: {a.instructions}</p>
                 )}
 
                 {a.attachment_url && (
@@ -284,7 +292,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                     onClick={() =>
                       downloadProtectedFile(a.attachment_url!, a.attachment_name || 'lampiran')
                     }
-                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-[#3D914C] hover:underline"
+                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-display font-bold text-[#3E7B27] hover:underline cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Unduh Lampiran: {a.attachment_name}</span>
@@ -295,9 +303,9 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
               <div className="flex flex-wrap items-center gap-3 shrink-0">
                 {isAdmin ? (
                   <>
-                    <div className="text-right mr-2">
-                      <div className="text-xs text-[#73796C]">Pengumpulan</div>
-                      <div className="text-sm font-bold tabular-nums text-[#181A17]">
+                    <div className="text-left desktop:text-right mr-2">
+                      <div className="text-xs text-[#6F7B68]">Pengumpulan</div>
+                      <div className="font-display text-sm font-bold tabular-nums text-[#20251D]">
                         {a.submission_count ?? 0} masuk · {a.graded_count ?? 0} dinilai
                       </div>
                     </div>
@@ -308,23 +316,23 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                     <button
                       type="button"
                       onClick={() => setDeleteTarget(a)}
-                      className="p-2 rounded-full text-[#73796C] hover:text-[#C44750] hover:bg-[#FCECEF]"
+                      className="p-2 rounded-full text-[#6F7B68] hover:text-[#D13447] hover:bg-[#D13447]/10 cursor-pointer"
                       aria-label={`Hapus ${a.title}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </>
                 ) : (
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="text-left sm:text-right">
+                  <div className="flex flex-col tablet:flex-row tablet:items-center gap-3">
+                    <div className="text-left tablet:text-right">
                       <SubmissionStatusIndicator status={a.my_submission?.status ?? 'not_submitted'} />
                       {a.my_submission?.status === 'graded' && (
-                        <div className="text-xs font-bold text-[#3D914C] mt-1.5 tabular-nums">
+                        <div className="text-xs font-bold text-[#3E7B27] mt-1.5 tabular-nums">
                           Nilai: {a.my_submission.score ?? '-'} · +{a.my_submission.awarded_points} Poin
                         </div>
                       )}
                       {a.my_submission?.admin_notes && (
-                        <div className="text-xs text-[#73796C] mt-0.5 max-w-xs">
+                        <div className="text-xs text-[#6F7B68] mt-0.5 max-w-xs">
                           Catatan: {a.my_submission.admin_notes}
                         </div>
                       )}
@@ -358,12 +366,12 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
       {/* Admin Submissions Inspection Table */}
       {isAdmin && selectedAssignment && (
         <Card className="p-0 overflow-hidden">
-          <div className="px-6 py-5 border-b border-[#DDE6C9] flex items-center justify-between">
+          <div className="px-6 py-5 border-b border-[#D5E4B6] flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold text-[#181A17]">
+              <h3 className="font-display text-base font-bold text-[#20251D]">
                 Daftar Pengumpulan — {selectedAssignment.title}
               </h3>
-              <p className="text-xs text-[#73796C]">
+              <p className="text-xs text-[#6F7B68]">
                 Poin akademik baru ditambahkan setelah Admin menilai pengumpulan.
               </p>
             </div>
@@ -380,7 +388,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
+                  <tr className="border-b border-[#D5E4B6] bg-[#F0F8DF]/70 text-xs font-semibold text-[#6F7B68]">
                     <th className="py-3 px-5">NIM</th>
                     <th className="py-3 px-4">Mahasiswa</th>
                     <th className="py-3 px-4">Kelas</th>
@@ -390,12 +398,14 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                     <th className="py-3 px-5 text-right">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DDE6C9]/60 text-sm">
+                <tbody className="divide-y divide-[#D5E4B6]/70 text-sm">
                   {submissions.map((sub) => (
-                    <tr key={sub.student_id} className="hover:bg-[#F0F8E0]/50 transition-colors">
-                      <td className="py-3.5 px-5 text-xs text-[#73796C] tabular-nums">{sub.nim}</td>
-                      <td className="py-3.5 px-4 font-bold text-[#181A17]">{sub.student_name}</td>
-                      <td className="py-3.5 px-4 text-xs text-[#73796C]">{sub.class_name}</td>
+                    <tr key={sub.student_id} className="hover:bg-[#F0F8DF]/50 transition-colors">
+                      <td className="py-3.5 px-5 text-xs text-[#6F7B68] tabular-nums">{sub.nim}</td>
+                      <td className="py-3.5 px-4 font-display font-bold text-[#20251D]">
+                        {sub.student_name}
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-[#6F7B68]">{sub.class_name}</td>
                       <td className="py-3.5 px-4 text-xs">
                         <div className="flex flex-col gap-1">
                           {sub.file_url && (
@@ -404,7 +414,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                               onClick={() =>
                                 downloadProtectedFile(sub.file_url, sub.file_name || 'tugas')
                               }
-                              className="inline-flex items-center gap-1 text-[#3D914C] font-semibold hover:underline text-left"
+                              className="inline-flex items-center gap-1 text-[#3E7B27] font-semibold hover:underline text-left cursor-pointer"
                             >
                               <Download className="w-3 h-3" />
                               <span>{sub.file_name || 'Unduh File'}</span>
@@ -415,20 +425,20 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                               href={sub.drive_link}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-[#181A17] font-semibold hover:underline"
+                              className="inline-flex items-center gap-1 text-[#20251D] font-semibold hover:underline"
                             >
                               <ExternalLink className="w-3 h-3" />
                               <span>Link Drive</span>
                             </a>
                           )}
                           {sub.answer_text && (
-                            <span className="text-[#73796C] line-clamp-1" title={sub.answer_text}>
+                            <span className="text-[#6F7B68] line-clamp-1" title={sub.answer_text}>
                               <FileText className="w-3 h-3 inline mr-1" />
                               {sub.answer_text}
                             </span>
                           )}
                           {!sub.file_url && !sub.drive_link && !sub.answer_text && (
-                            <span className="text-[#73796C]">—</span>
+                            <span className="text-[#6F7B68]">—</span>
                           )}
                         </div>
                       </td>
@@ -437,7 +447,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                       </td>
                       <td className="py-3.5 px-4 text-right text-xs tabular-nums">
                         {sub.score ?? '-'} /{' '}
-                        <span className="font-bold text-[#3D914C]">{sub.awarded_points ?? 0} pt</span>
+                        <span className="font-bold text-[#3E7B27]">{sub.awarded_points ?? 0} pt</span>
                       </td>
                       <td className="py-3.5 px-5 text-right">
                         {sub.submission_id ? (
@@ -459,7 +469,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                             Beri Nilai
                           </Button>
                         ) : (
-                          <span className="text-xs text-[#73796C]">Menunggu</span>
+                          <span className="text-xs text-[#6F7B68]">Menunggu</span>
                         )}
                       </td>
                     </tr>
@@ -481,7 +491,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
       >
         <form onSubmit={handleCreateAssignment} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Judul Tugas</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Judul Tugas</label>
             <Input
               type="text"
               required
@@ -491,7 +501,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Deskripsi</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Deskripsi</label>
             <Textarea
               rows={2}
               value={formState.description}
@@ -499,7 +509,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Instruksi Pengerjaan
             </label>
             <Textarea
@@ -508,9 +518,9 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
               onChange={(e) => setFormState({ ...formState, instructions: e.target.value })}
             />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Deadline</label>
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Deadline</label>
               <Input
                 type="datetime-local"
                 required
@@ -519,7 +529,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                 Poin Maksimal
               </label>
               <Input
@@ -534,7 +544,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               File Lampiran Soal (Opsional)
             </label>
             <input
@@ -543,20 +553,20 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                 const f = e.target.files?.[0];
                 if (f) handleAttachmentUpload(f, 'admin');
               }}
-              className="text-xs text-[#73796C]"
+              className="text-xs text-[#4E5849]"
             />
             {formState.attachment_name && (
-              <div className="text-xs text-[#3D914C] mt-1 font-semibold">
+              <div className="text-xs text-[#3E7B27] mt-1 font-semibold">
                 Terlampir: {formState.attachment_name}
               </div>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-2">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-2">
               Kelas Penerima Tugas
             </label>
-            <div className="max-h-36 overflow-y-auto border border-[#DDE6C9] rounded-2xl p-3 space-y-2 bg-[#F0F8E0]/40">
+            <div className="max-h-36 overflow-y-auto border border-[#D5E4B6] rounded-[16px] p-3 space-y-2 bg-[#F0F8DF]/50">
               {classes.map((c) => {
                 const checked = formState.class_ids.includes(c.id);
                 return (
@@ -573,9 +583,9 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                         }));
                       }}
                     />
-                    <span className="font-medium text-[#181A17]">
+                    <span className="font-medium text-[#20251D]">
                       {c.name}{' '}
-                      <span className="text-xs text-[#73796C]">({c.study_program_name})</span>
+                      <span className="text-xs text-[#6F7B68]">({c.study_program_name})</span>
                     </span>
                   </label>
                 );
@@ -603,14 +613,14 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
       >
         <form onSubmit={handleGradeSubmit} className="space-y-4">
           {gradeTarget?.answer_text && (
-            <div className="p-3.5 rounded-2xl bg-[#F0F8E0] border border-[#DDE6C9] text-xs text-[#181A17]">
+            <div className="p-3.5 rounded-[16px] bg-[#F0F8DF] border border-[#D5E4B6] text-xs text-[#20251D]">
               <div className="font-bold mb-1">Jawaban Mahasiswa:</div>
               <p className="whitespace-pre-wrap">{gradeTarget.answer_text}</p>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Keputusan</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Keputusan</label>
             <Select
               value={gradeForm.status}
               onChange={(e) => setGradeForm({ ...gradeForm, status: e.target.value as any })}
@@ -623,7 +633,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                 Nilai (0–100)
               </label>
               <Input
@@ -636,7 +646,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+              <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                 Poin Akademik (Maks {selectedAssignment?.max_points ?? 100})
               </label>
               <Input
@@ -646,13 +656,13 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                 disabled={gradeForm.status === 'revision'}
                 value={gradeForm.status === 'revision' ? '0' : gradeForm.awarded_points}
                 onChange={(e) => setGradeForm({ ...gradeForm, awarded_points: e.target.value })}
-                className="tabular-nums disabled:bg-[#F0F8E0]"
+                className="tabular-nums disabled:bg-[#F0F8DF]"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Catatan Admin
             </label>
             <Textarea
@@ -683,7 +693,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
       >
         <form onSubmit={handleStudentSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Upload File Tugas (PDF, DOCX, ZIP, dll. Maks 10MB)
             </label>
             <input
@@ -692,17 +702,17 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                 const f = e.target.files?.[0];
                 if (f) handleAttachmentUpload(f, 'student');
               }}
-              className="text-xs text-[#73796C]"
+              className="text-xs text-[#4E5849]"
             />
             {submitForm.file_name && (
-              <div className="text-xs text-[#3D914C] mt-1 font-semibold">
+              <div className="text-xs text-[#3E7B27] mt-1 font-semibold">
                 File siap dikirim: {submitForm.file_name}
               </div>
             )}
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Link Google Drive (Opsional)
             </label>
             <Input
@@ -714,7 +724,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Jawaban / Deskripsi Pengumpulan
             </label>
             <Textarea

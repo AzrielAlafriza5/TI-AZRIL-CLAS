@@ -1,27 +1,31 @@
-import type { ReactNode, ButtonHTMLAttributes, InputHTMLAttributes, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import type {
+  ReactNode,
+  ButtonHTMLAttributes,
+  InputHTMLAttributes,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from 'react';
 import { Search } from 'lucide-react';
 
 interface CardProps {
   children: ReactNode;
-  variant?: 'white' | 'soft' | 'dark';
+  variant?: 'white' | 'soft' | 'dark' | 'elevated' | 'obsidian';
   className?: string;
 }
 
 export function Card({ children, variant = 'white', className = '' }: CardProps) {
   const base =
     variant === 'soft'
-      ? 'bg-[#DBECB8] border border-[#DDE6C9] text-[#181A17]'
+      ? 'rounded-[24px] bg-[#DCECB8] border border-[#D5E4B6] text-[#20251D]'
       : variant === 'dark'
-        ? 'bg-[#181A17] border border-[#181A17] text-white'
-        : 'bg-white border border-[#DDE6C9] text-[#181A17]';
+        ? 'rounded-[26px] bg-[#171A17] border border-[#232822] text-white'
+        : variant === 'elevated'
+          ? 'rounded-[26px] bg-[#232822] border border-[#232822] text-white'
+          : variant === 'obsidian'
+            ? 'rounded-[26px] bg-[#101210] border border-[#232822] text-white'
+            : 'rounded-[24px] bg-white border border-[#D5E4B6] text-[#20251D]';
 
-  return (
-    <div
-      className={`rounded-[26px] shadow-[0_4px_20px_rgba(24,26,23,0.03)] p-6 ${base} ${className}`}
-    >
-      {children}
-    </div>
-  );
+  return <div className={`p-5 tablet:p-6 ${base} ${className}`}>{children}</div>;
 }
 
 interface StatCardProps {
@@ -29,26 +33,53 @@ interface StatCardProps {
   value: string | number;
   sublabel?: string;
   icon: ReactNode;
-  variant?: 'white' | 'soft';
+  variant?: 'white' | 'soft' | 'dark';
 }
 
 export function StatCard({ label, value, sublabel, icon, variant = 'white' }: StatCardProps) {
+  const isDark = variant === 'dark';
+  const containerCls = isDark
+    ? 'rounded-[26px] bg-[#171A17] border border-[#232822] text-white'
+    : variant === 'soft'
+      ? 'rounded-[24px] bg-[#DCECB8] border border-[#D5E4B6] text-[#20251D]'
+      : 'rounded-[24px] bg-white border border-[#D5E4B6] text-[#20251D] hover:border-[#B5D45D]';
+
   return (
     <div
-      className={`rounded-[26px] border border-[#DDE6C9] p-6 shadow-[0_4px_20px_rgba(24,26,23,0.03)] flex items-start justify-between gap-4 transition-transform duration-200 hover:-translate-y-0.5 ${
-        variant === 'soft' ? 'bg-[#DBECB8]' : 'bg-white'
-      }`}
+      className={`p-5 tablet:p-6 flex items-start justify-between gap-4 transition-all duration-150 ${containerCls}`}
     >
       <div className="min-w-0">
-        <div className="text-xs font-medium text-[#73796C]">{label}</div>
-        <div className="text-3xl font-bold text-[#181A17] tabular-nums tracking-tight mt-2">
+        <div
+          className={`text-xs font-medium ${
+            isDark ? 'text-[#DCECB8]/80' : 'text-[#6F7B68]'
+          }`}
+        >
+          {label}
+        </div>
+        <div
+          className={`font-display text-2xl tablet:text-3xl font-bold tabular-nums tracking-tight mt-2 ${
+            isDark ? 'text-white' : 'text-[#20251D]'
+          }`}
+        >
           {value}
         </div>
-        {sublabel && <div className="text-xs text-[#73796C] mt-2">{sublabel}</div>}
+        {sublabel && (
+          <div
+            className={`text-xs mt-1.5 ${
+              isDark ? 'text-[#B5D45D]' : 'text-[#4E5849]'
+            }`}
+          >
+            {sublabel}
+          </div>
+        )}
       </div>
       <div
-        className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
-          variant === 'soft' ? 'bg-white text-[#181A17]' : 'bg-[#DBECB8] text-[#181A17]'
+        className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
+          isDark
+            ? 'bg-[#232822] text-[#B5D45D] border border-[#B5D45D]/20'
+            : variant === 'soft'
+              ? 'bg-white text-[#20251D] border border-[#D5E4B6]'
+              : 'bg-[#F0F8DF] text-[#20251D] border border-[#D5E4B6]'
         }`}
       >
         {icon}
@@ -58,7 +89,7 @@ export function StatCard({ label, value, sublabel, icon, variant = 'white' }: St
 }
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'danger';
+  variant?: 'primary' | 'secondary' | 'dark' | 'outline' | 'danger';
   size?: 'sm' | 'md';
 }
 
@@ -71,18 +102,20 @@ export function Button({
 }: ButtonProps) {
   const sizeCls = size === 'sm' ? 'px-4 py-2 text-xs' : 'px-5 py-2.5 text-sm';
   const variantCls =
-    variant === 'secondary'
-      ? 'bg-[#B5D45D] text-[#181A17] hover:bg-[#a7c84d]'
-      : variant === 'outline'
-        ? 'bg-transparent border border-[#DDE6C9] text-[#73796C] hover:text-[#181A17] hover:border-[#B5D45D] hover:bg-white'
-        : variant === 'danger'
-          ? 'bg-[#C44750] text-white hover:bg-[#b03c45]'
-          : 'bg-[#181A17] text-white hover:bg-[#2c302a]';
+    variant === 'dark'
+      ? 'bg-[#171A17] text-white hover:bg-[#232822]'
+      : variant === 'secondary'
+        ? 'bg-[#DCECB8] text-[#20251D] border border-[#D5E4B6] hover:bg-[#C5E370]'
+        : variant === 'outline'
+          ? 'bg-white border border-[#D5E4B6] text-[#4E5849] hover:text-[#20251D] hover:border-[#B5D45D] hover:bg-[#F0F8DF]/60'
+          : variant === 'danger'
+            ? 'bg-[#D13447] text-white hover:bg-[#b82a3b]'
+            : 'bg-[#B5D45D] text-[#171A17] hover:bg-[#C5E370]';
 
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-200 whitespace-nowrap shrink-0 disabled:opacity-50 cursor-pointer ${sizeCls} ${variantCls} ${className}`}
+      className={`font-display inline-flex items-center justify-center gap-2 font-semibold rounded-full transition-all duration-150 active:scale-[0.98] whitespace-nowrap shrink-0 disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${sizeCls} ${variantCls} ${className}`}
     >
       {children}
     </button>
@@ -93,7 +126,7 @@ export function Input({ className = '', ...props }: InputHTMLAttributes<HTMLInpu
   return (
     <input
       {...props}
-      className={`w-full px-4 py-2.5 text-sm bg-white border border-[#DDE6C9] rounded-2xl text-[#181A17] placeholder:text-[#73796C] focus:outline-none focus:border-[#B5D45D] transition-colors ${className}`}
+      className={`w-full px-4 py-2.5 text-sm bg-white border border-[#D5E4B6] rounded-[16px] text-[#20251D] placeholder:text-[#6F7B68] focus:outline-none focus:border-[#B5D45D] focus:ring-2 focus:ring-[#B5D45D]/25 transition-all duration-150 ${className}`}
     />
   );
 }
@@ -102,7 +135,7 @@ export function Select({ className = '', children, ...props }: SelectHTMLAttribu
   return (
     <select
       {...props}
-      className={`px-4 py-2.5 text-sm bg-white border border-[#DDE6C9] rounded-2xl text-[#181A17] focus:outline-none focus:border-[#B5D45D] transition-colors ${className}`}
+      className={`px-4 py-2.5 text-sm bg-white border border-[#D5E4B6] rounded-[16px] text-[#20251D] focus:outline-none focus:border-[#B5D45D] focus:ring-2 focus:ring-[#B5D45D]/25 transition-all duration-150 ${className}`}
     >
       {children}
     </select>
@@ -113,7 +146,7 @@ export function Textarea({ className = '', ...props }: TextareaHTMLAttributes<HT
   return (
     <textarea
       {...props}
-      className={`w-full px-4 py-2.5 text-sm bg-white border border-[#DDE6C9] rounded-2xl text-[#181A17] placeholder:text-[#73796C] focus:outline-none focus:border-[#B5D45D] transition-colors ${className}`}
+      className={`w-full px-4 py-2.5 text-sm bg-white border border-[#D5E4B6] rounded-[16px] text-[#20251D] placeholder:text-[#6F7B68] focus:outline-none focus:border-[#B5D45D] focus:ring-2 focus:ring-[#B5D45D]/25 transition-all duration-150 ${className}`}
     />
   );
 }
@@ -121,17 +154,20 @@ export function Textarea({ className = '', ...props }: TextareaHTMLAttributes<HT
 export function ProgressBar({
   percent,
   height = 'h-2.5',
-  trackClass = 'bg-[#F0F8E0]',
+  trackClass = 'bg-[#F0F8DF]',
   fillClass = 'bg-[#B5D45D]',
+  darkTrack = false,
 }: {
   percent: number;
   height?: string;
   trackClass?: string;
   fillClass?: string;
+  darkTrack?: boolean;
 }) {
   const clamped = Math.min(100, Math.max(0, Math.round(percent)));
+  const resolvedTrack = darkTrack ? 'bg-[#232822] border-[#232822]' : `${trackClass} border-[#D5E4B6]/70`;
   return (
-    <div className={`w-full ${height} ${trackClass} rounded-full overflow-hidden border border-[#DDE6C9]/60`}>
+    <div className={`w-full ${height} ${resolvedTrack} rounded-full overflow-hidden border`}>
       <div
         className={`h-full ${fillClass} rounded-full transition-all duration-500`}
         style={{ width: `${clamped}%` }}
@@ -153,14 +189,100 @@ export function SearchBar({
 }) {
   return (
     <div className={`relative ${className}`}>
-      <Search className="w-4 h-4 text-[#73796C] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+      <Search className="w-4 h-4 text-[#6F7B68] absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" />
       <input
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-[#DDE6C9] rounded-full text-[#181A17] placeholder:text-[#73796C] focus:outline-none focus:border-[#B5D45D] transition-colors"
+        className="w-full pl-10 pr-4 py-2.5 text-sm bg-white border border-[#D5E4B6] rounded-[16px] text-[#20251D] placeholder:text-[#6F7B68] focus:outline-none focus:border-[#B5D45D] focus:ring-2 focus:ring-[#B5D45D]/25 transition-all duration-150"
       />
+    </div>
+  );
+}
+
+export function PageHeader({
+  title,
+  description,
+  actions,
+}: {
+  title: string;
+  description?: string;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col tablet:flex-row tablet:items-center justify-between gap-4">
+      <div className="min-w-0">
+        <h1 className="font-display text-2xl desktop:text-[26px] font-bold tracking-tight text-[#20251D]">
+          {title}
+        </h1>
+        {description && (
+          <p className="text-sm text-[#4E5849] mt-1 leading-relaxed">{description}</p>
+        )}
+      </div>
+      {actions && <div className="flex flex-wrap items-center gap-2.5 shrink-0">{actions}</div>}
+    </div>
+  );
+}
+
+export function SegmentedControl<T extends string>({
+  options,
+  value,
+  onChange,
+  className = '',
+}: {
+  options: Array<{ id: T; label: string; icon?: ReactNode }>;
+  value: T;
+  onChange: (val: T) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`inline-flex flex-wrap items-center gap-1 p-1.5 rounded-full bg-white border border-[#D5E4B6] ${className}`}
+    >
+      {options.map((opt) => {
+        const active = value === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            className={`font-display inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs tablet:text-sm font-semibold transition-all duration-150 cursor-pointer whitespace-nowrap ${
+              active
+                ? 'bg-[#171A17] text-[#B5D45D]'
+                : 'text-[#4E5849] hover:text-[#20251D] hover:bg-[#F0F8DF]'
+            }`}
+          >
+            {opt.icon}
+            <span>{opt.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+export function EmptyState({
+  icon,
+  title,
+  description,
+  action,
+}: {
+  icon: ReactNode;
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="rounded-[24px] bg-white border border-[#D5E4B6] px-6 py-12 text-center flex flex-col items-center">
+      <div className="w-12 h-12 rounded-2xl bg-[#F0F8DF] border border-[#D5E4B6] text-[#4E5849] flex items-center justify-center mb-3.5">
+        {icon}
+      </div>
+      <div className="font-display text-sm font-bold text-[#20251D]">{title}</div>
+      {description && (
+        <p className="text-xs text-[#6F7B68] mt-1 max-w-sm leading-relaxed">{description}</p>
+      )}
+      {action && <div className="mt-4">{action}</div>}
     </div>
   );
 }

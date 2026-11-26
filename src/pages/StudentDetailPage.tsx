@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, KeyRound, ShieldCheck } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
-import { Card, Button, Select, Textarea } from '../components/ui/DesignSystem.tsx';
+import {
+  Card,
+  Button,
+  Select,
+  Textarea,
+  SegmentedControl,
+} from '../components/ui/DesignSystem.tsx';
 import { StreakFlame } from '../components/ui/BrandLogo.tsx';
 import {
   StudentStatusIndicator,
@@ -92,7 +98,7 @@ export function StudentDetailPage({ studentId, onBack, onToast }: StudentDetailP
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#73796C] hover:text-[#181A17]"
+          className="font-display inline-flex items-center gap-1.5 text-sm font-semibold text-[#4E5849] hover:text-[#20251D] cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Kembali ke Daftar Mahasiswa</span>
@@ -110,41 +116,41 @@ export function StudentDetailPage({ studentId, onBack, onToast }: StudentDetailP
         </div>
       </div>
 
-      {/* Student Profile Summary Card */}
-      <Card variant="soft" className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      {/* Student Profile Summary Dark Card */}
+      <Card variant="dark" className="flex flex-col desktop:flex-row desktop:items-center justify-between gap-6">
         <div>
-          <div className="text-xs font-bold text-[#3D914C] tabular-nums">
+          <div className="text-xs font-semibold text-[#B5D45D] tabular-nums">
             NIM {student.nim} · {student.study_program_name} · {student.class_name}
           </div>
-          <h1 className="text-2xl font-bold text-[#181A17] mt-1">{student.full_name}</h1>
-          <div className="mt-3 flex items-center gap-4">
+          <h1 className="font-display text-2xl font-bold text-white mt-1">{student.full_name}</h1>
+          <div className="mt-3 flex items-center gap-3">
             <StudentStatusIndicator status={student.status} />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 lg:gap-6 bg-white rounded-3xl p-4 border border-[#DDE6C9]">
+        <div className="grid grid-cols-2 tablet:grid-cols-4 gap-3 bg-[#232822] rounded-[20px] p-4 border border-[#232822]">
           <div>
-            <div className="text-xs text-[#73796C]">Total Poin</div>
-            <div className="text-xl font-bold tabular-nums text-[#3D914C] mt-0.5">
+            <div className="text-[11px] text-[#DCECB8]/75">Total Poin</div>
+            <div className="font-display text-xl font-bold tabular-nums text-[#B5D45D] mt-0.5">
               {student.total_points}
             </div>
           </div>
           <div>
-            <div className="text-xs text-[#73796C]">Total EXP</div>
-            <div className="text-xl font-bold tabular-nums text-[#181A17] mt-0.5">
+            <div className="text-[11px] text-[#DCECB8]/75">Total EXP</div>
+            <div className="font-display text-xl font-bold tabular-nums text-white mt-0.5">
               {student.total_exp}{' '}
-              <span className="text-xs font-medium text-[#73796C]">Lv.{student.current_level}</span>
+              <span className="text-xs font-medium text-[#DCECB8]/75">Lv.{student.current_level}</span>
             </div>
           </div>
           <div>
-            <div className="text-xs text-[#73796C]">Current Streak</div>
+            <div className="text-[11px] text-[#DCECB8]/75">Current Streak</div>
             <div className="mt-1">
-              <StreakFlame days={student.current_streak ?? 0} size="sm" />
+              <StreakFlame days={student.current_streak ?? 0} size="sm" darkSurface />
             </div>
           </div>
           <div>
-            <div className="text-xs text-[#73796C]">Best / Login Days</div>
-            <div className="text-base font-bold tabular-nums text-[#181A17] mt-1">
+            <div className="text-[11px] text-[#DCECB8]/75">Best / Login Days</div>
+            <div className="font-display text-base font-bold tabular-nums text-white mt-1">
               {student.best_streak ?? 0}d / {student.total_login_days ?? 0}d
             </div>
           </div>
@@ -152,47 +158,38 @@ export function StudentDetailPage({ studentId, onBack, onToast }: StudentDetailP
       </Card>
 
       {/* Tabs */}
-      <div className="flex flex-wrap items-center gap-1 p-1 bg-white border border-[#DDE6C9] rounded-full w-fit">
-        {[
-          { id: 'points', label: `Riwayat Poin (${points.length})` },
-          { id: 'exp', label: `Riwayat EXP (${exp.length})` },
+      <SegmentedControl
+        value={tab}
+        onChange={setTab}
+        options={[
+          { id: 'points', label: `Poin (${points.length})` },
+          { id: 'exp', label: `EXP (${exp.length})` },
           { id: 'attendance', label: `Absensi (${attendance.length})` },
           { id: 'submissions', label: `Tugas (${submissions.length})` },
-          { id: 'streak', label: `Login Harian (${loginHistory.length})` },
-          { id: 'status', label: `Riwayat Status (${statusHistory.length})` },
-        ].map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id as any)}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-colors whitespace-nowrap ${
-              tab === t.id ? 'bg-[#181A17] text-white' : 'text-[#73796C] hover:text-[#181A17]'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+          { id: 'streak', label: `Login (${loginHistory.length})` },
+          { id: 'status', label: `Status (${statusHistory.length})` },
+        ]}
+      />
 
       {/* Tab Content */}
       <Card>
         {tab === 'points' && (
-          <div className="divide-y divide-[#DDE6C9]/60">
+          <div className="divide-y divide-[#D5E4B6]/70">
             {points.length === 0 ? (
-              <div className="py-10 text-center text-sm text-[#73796C]">Belum ada riwayat poin.</div>
+              <div className="py-10 text-center text-sm text-[#6F7B68]">Belum ada riwayat poin.</div>
             ) : (
               points.map((p: any) => (
                 <div key={p.id} className="py-3.5 flex items-center justify-between gap-4 text-sm">
                   <div>
-                    <div className="font-semibold text-[#181A17]">{p.description}</div>
-                    <div className="text-xs text-[#73796C] mt-0.5 tabular-nums">
+                    <div className="font-semibold text-[#20251D]">{p.description}</div>
+                    <div className="text-xs text-[#6F7B68] mt-0.5 tabular-nums">
                       Sumber: {p.source} · {String(p.created_at).slice(0, 16).replace('T', ' ')}
                       {p.admin_name ? ` · oleh ${p.admin_name}` : ''}
                     </div>
                   </div>
                   <span
-                    className={`font-bold tabular-nums ${
-                      p.amount >= 0 ? 'text-[#3D914C]' : 'text-[#C44750]'
+                    className={`font-display font-bold tabular-nums ${
+                      p.amount >= 0 ? 'text-[#3E7B27]' : 'text-[#D13447]'
                     }`}
                   >
                     {p.amount >= 0 ? `+${p.amount}` : p.amount}
@@ -204,19 +201,19 @@ export function StudentDetailPage({ studentId, onBack, onToast }: StudentDetailP
         )}
 
         {tab === 'exp' && (
-          <div className="divide-y divide-[#DDE6C9]/60">
+          <div className="divide-y divide-[#D5E4B6]/70">
             {exp.length === 0 ? (
-              <div className="py-10 text-center text-sm text-[#73796C]">Belum ada riwayat EXP.</div>
+              <div className="py-10 text-center text-sm text-[#6F7B68]">Belum ada riwayat EXP.</div>
             ) : (
               exp.map((e: any) => (
                 <div key={e.id} className="py-3.5 flex items-center justify-between gap-4 text-sm">
                   <div>
-                    <div className="font-semibold text-[#181A17]">{e.description}</div>
-                    <div className="text-xs text-[#73796C] mt-0.5 tabular-nums">
+                    <div className="font-semibold text-[#20251D]">{e.description}</div>
+                    <div className="text-xs text-[#6F7B68] mt-0.5 tabular-nums">
                       {e.source} · {String(e.created_at).slice(0, 16).replace('T', ' ')}
                     </div>
                   </div>
-                  <span className="px-3 py-1 rounded-full bg-[#DBECB8] text-xs font-bold text-[#3D914C] tabular-nums">
+                  <span className="px-3 py-1 rounded-full bg-[#DCECB8] text-xs font-display font-bold text-[#3E7B27] tabular-nums">
                     +{e.amount} EXP
                   </span>
                 </div>
@@ -226,15 +223,17 @@ export function StudentDetailPage({ studentId, onBack, onToast }: StudentDetailP
         )}
 
         {tab === 'attendance' && (
-          <div className="divide-y divide-[#DDE6C9]/60">
+          <div className="divide-y divide-[#D5E4B6]/70">
             {attendance.length === 0 ? (
-              <div className="py-10 text-center text-sm text-[#73796C]">Belum ada riwayat absensi.</div>
+              <div className="py-10 text-center text-sm text-[#6F7B68]">Belum ada riwayat absensi.</div>
             ) : (
               attendance.map((a: any) => (
                 <div key={a.id} className="py-3.5 flex items-center justify-between text-sm">
                   <div className="tabular-nums">
-                    <span className="font-bold text-[#181A17]">Pertemuan {a.meeting_number}</span>
-                    <span className="text-[#73796C]"> · {a.attendance_date} · {a.source}</span>
+                    <span className="font-display font-bold text-[#20251D]">
+                      Pertemuan {a.meeting_number}
+                    </span>
+                    <span className="text-[#6F7B68]"> · {a.attendance_date} · {a.source}</span>
                   </div>
                   <AttendanceStatusIndicator status={a.status} />
                 </div>
@@ -244,15 +243,15 @@ export function StudentDetailPage({ studentId, onBack, onToast }: StudentDetailP
         )}
 
         {tab === 'submissions' && (
-          <div className="divide-y divide-[#DDE6C9]/60">
+          <div className="divide-y divide-[#D5E4B6]/70">
             {submissions.length === 0 ? (
-              <div className="py-10 text-center text-sm text-[#73796C]">Belum ada pengumpulan tugas.</div>
+              <div className="py-10 text-center text-sm text-[#6F7B68]">Belum ada pengumpulan tugas.</div>
             ) : (
               submissions.map((sub: any) => (
                 <div key={sub.id} className="py-3.5 flex items-center justify-between gap-4 text-sm">
                   <div>
-                    <div className="font-bold text-[#181A17]">{sub.assignment_title}</div>
-                    <div className="text-xs text-[#73796C] mt-0.5 tabular-nums">
+                    <div className="font-display font-bold text-[#20251D]">{sub.assignment_title}</div>
+                    <div className="text-xs text-[#6F7B68] mt-0.5 tabular-nums">
                       Dikumpulkan: {String(sub.submitted_at).slice(0, 16).replace('T', ' ')} · Nilai:{' '}
                       {sub.score ?? '-'} · Poin: {sub.awarded_points}
                     </div>
@@ -265,14 +264,14 @@ export function StudentDetailPage({ studentId, onBack, onToast }: StudentDetailP
         )}
 
         {tab === 'streak' && (
-          <div className="divide-y divide-[#DDE6C9]/60">
+          <div className="divide-y divide-[#D5E4B6]/70">
             {loginHistory.length === 0 ? (
-              <div className="py-10 text-center text-sm text-[#73796C]">Belum ada riwayat login.</div>
+              <div className="py-10 text-center text-sm text-[#6F7B68]">Belum ada riwayat login.</div>
             ) : (
               loginHistory.map((lh: any) => (
                 <div key={lh.id} className="py-3 flex items-center justify-between text-sm tabular-nums">
-                  <span className="text-[#181A17] font-medium">{lh.login_date}</span>
-                  <span className="px-3 py-1 rounded-full bg-[#DBECB8] text-xs font-bold text-[#181A17]">
+                  <span className="text-[#20251D] font-medium">{lh.login_date}</span>
+                  <span className="px-3 py-1 rounded-full bg-[#DCECB8] text-xs font-display font-bold text-[#20251D]">
                     Streak Hari ke-{lh.streak_day}
                   </span>
                 </div>
@@ -282,20 +281,20 @@ export function StudentDetailPage({ studentId, onBack, onToast }: StudentDetailP
         )}
 
         {tab === 'status' && (
-          <div className="divide-y divide-[#DDE6C9]/60">
+          <div className="divide-y divide-[#D5E4B6]/70">
             {statusHistory.length === 0 ? (
-              <div className="py-10 text-center text-sm text-[#73796C]">Belum ada perubahan status.</div>
+              <div className="py-10 text-center text-sm text-[#6F7B68]">Belum ada perubahan status.</div>
             ) : (
               statusHistory.map((sh: any) => (
                 <div key={sh.id} className="py-3.5 text-sm">
-                  <div className="flex items-center gap-2 font-bold text-[#181A17]">
+                  <div className="flex items-center gap-2 font-display font-bold text-[#20251D]">
                     <span>{sh.previous_status.toUpperCase()}</span>
                     <span>→</span>
                     <span>{sh.new_status.toUpperCase()}</span>
-                    <span className="text-xs font-normal text-[#73796C]">({sh.source})</span>
+                    <span className="text-xs font-normal text-[#6F7B68]">({sh.source})</span>
                   </div>
-                  {sh.reason && <div className="text-xs text-[#73796C] mt-0.5">{sh.reason}</div>}
-                  <div className="text-xs text-[#73796C] mt-0.5 tabular-nums">
+                  {sh.reason && <div className="text-xs text-[#4E5849] mt-0.5">{sh.reason}</div>}
+                  <div className="text-xs text-[#6F7B68] mt-0.5 tabular-nums">
                     {String(sh.created_at).slice(0, 16).replace('T', ' ')} · oleh{' '}
                     {sh.changed_by_name ?? 'Admin'}
                   </div>
@@ -315,7 +314,7 @@ export function StudentDetailPage({ studentId, onBack, onToast }: StudentDetailP
       >
         <form onSubmit={handleSaveStatus} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Status</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Status</label>
             <Select
               value={newStatus}
               onChange={(e) => setNewStatus(e.target.value as StudentStatus)}
@@ -327,7 +326,7 @@ export function StudentDetailPage({ studentId, onBack, onToast }: StudentDetailP
             </Select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Alasan / Catatan
             </label>
             <Textarea

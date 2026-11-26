@@ -9,7 +9,13 @@ import {
   History,
 } from 'lucide-react';
 import { apiFetch, getAuthToken } from '../lib/api.ts';
-import { Card, Button, Input } from '../components/ui/DesignSystem.tsx';
+import {
+  Card,
+  Button,
+  Input,
+  PageHeader,
+  SegmentedControl,
+} from '../components/ui/DesignSystem.tsx';
 import { StudentStatusIndicator } from '../components/ui/StatusBadge.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
 import type { StudentStatus } from '../types/index.ts';
@@ -178,32 +184,21 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#181A17] tracking-tight">Impor Excel & Validasi NIM</h1>
-        <p className="text-sm text-[#73796C] mt-1">
-          Cocokkan data absensi dan pembaruan status secara akurat menggunakan NIM, lengkap dengan preview dan pencegahan duplikasi.
-        </p>
-      </div>
+      <PageHeader
+        title="Impor Excel & Validasi NIM"
+        description="Cocokkan data absensi dan pembaruan status secara akurat menggunakan NIM, lengkap dengan preview dan pencegahan duplikasi."
+      />
 
       {/* Segmented Pill Tabs */}
-      <div className="flex flex-wrap items-center gap-1 p-1 bg-white border border-[#DDE6C9] rounded-full w-fit">
-        {[
+      <SegmentedControl
+        value={tab}
+        onChange={setTab}
+        options={[
           { id: 'attendance', label: 'Impor Absensi' },
           { id: 'status', label: 'Impor Status Mahasiswa' },
           { id: 'history', label: 'Riwayat Impor Excel' },
-        ].map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTab(t.id as any)}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-colors whitespace-nowrap ${
-              tab === t.id ? 'bg-[#181A17] text-white' : 'text-[#73796C] hover:text-[#181A17]'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+        ]}
+      />
 
       {/* TAB 1: ATTENDANCE IMPORT */}
       {tab === 'attendance' && (
@@ -212,8 +207,10 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
             <form onSubmit={handlePreviewAttendance} className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <FileSpreadsheet className="w-5 h-5 text-[#3D914C]" />
-                  <h2 className="text-base font-bold text-[#181A17]">Unggah File Excel Absensi</h2>
+                  <FileSpreadsheet className="w-5 h-5 text-[#3E7B27]" />
+                  <h2 className="font-display text-base font-bold text-[#20251D]">
+                    Unggah File Excel Absensi
+                  </h2>
                 </div>
                 <Button
                   type="button"
@@ -226,9 +223,9 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+                  <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                     Tanggal Absensi
                   </label>
                   <Input
@@ -239,7 +236,7 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+                  <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                     Pertemuan Ke-
                   </label>
                   <Input
@@ -252,14 +249,14 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+                  <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                     File (.xlsx / .xls / .csv)
                   </label>
                   <input
                     type="file"
                     accept=".xlsx,.xls,.csv"
                     onChange={(e) => setAttFile(e.target.files?.[0] ?? null)}
-                    className="text-xs text-[#73796C] mt-2"
+                    className="text-xs text-[#4E5849] mt-2"
                   />
                 </div>
               </div>
@@ -273,19 +270,18 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
 
           {attPreview && (
             <Card className="p-0 overflow-hidden">
-              <div className="p-6 border-b border-[#DDE6C9] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="p-6 border-b border-[#D5E4B6] flex flex-col tablet:flex-row tablet:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-base font-bold text-[#181A17]">
+                  <h3 className="font-display text-base font-bold text-[#20251D]">
                     Preview Impor: {attPreview.fileName}
                   </h3>
-                  <p className="text-xs text-[#73796C] mt-0.5 tabular-nums">
+                  <p className="text-xs text-[#6F7B68] mt-0.5 tabular-nums">
                     Cocok: {attPreview.summary.matched} · Duplikat: {attPreview.summary.duplicates} ·
                     Tidak Ditemukan: {attPreview.summary.notFound} · Tidak Valid:{' '}
                     {attPreview.summary.invalid}
                   </p>
                 </div>
                 <Button
-                  variant="secondary"
                   disabled={committing || attPreview.summary.matched === 0}
                   onClick={handleCommitAttendance}
                 >
@@ -301,7 +297,7 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
+                    <tr className="border-b border-[#D5E4B6] bg-[#F0F8DF]/70 text-xs font-semibold text-[#6F7B68]">
                       <th className="py-3 px-5">Baris</th>
                       <th className="py-3 px-4">NIM</th>
                       <th className="py-3 px-4">Mahasiswa</th>
@@ -312,16 +308,16 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
                       <th className="py-3 px-5">Hasil Validasi</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#DDE6C9]/60">
+                  <tbody className="divide-y divide-[#D5E4B6]/70">
                     {attPreview.rows.map((r: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-[#F0F8E0]/40">
-                        <td className="py-3 px-5 text-xs text-[#73796C] tabular-nums">
+                      <tr key={idx} className="hover:bg-[#F0F8DF]/45">
+                        <td className="py-3 px-5 text-xs text-[#6F7B68] tabular-nums">
                           {r.rowNumber}
                         </td>
-                        <td className="py-3 px-4 text-xs font-semibold text-[#181A17] tabular-nums">
+                        <td className="py-3 px-4 text-xs font-semibold text-[#20251D] tabular-nums">
                           {r.nim || '—'}
                         </td>
-                        <td className="py-3 px-4 font-medium text-[#181A17]">
+                        <td className="py-3 px-4 font-medium text-[#20251D]">
                           {r.full_name || '—'}
                         </td>
                         <td className="py-3 px-4">
@@ -331,20 +327,20 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
                             '—'
                           )}
                         </td>
-                        <td className="py-3 px-4 text-xs text-[#73796C]">{r.class_name || '—'}</td>
-                        <td className="py-3 px-4 uppercase text-xs font-bold text-[#181A17]">
+                        <td className="py-3 px-4 text-xs text-[#6F7B68]">{r.class_name || '—'}</td>
+                        <td className="py-3 px-4 uppercase text-xs font-bold text-[#20251D]">
                           {r.status || r.rawStatus || '—'}
                         </td>
-                        <td className="py-3 px-4 text-right font-bold tabular-nums text-[#3D914C]">
+                        <td className="py-3 px-4 text-right font-bold tabular-nums text-[#3E7B27]">
                           {r.pointsPreview !== undefined ? `+${r.pointsPreview}` : '—'}
                         </td>
                         <td className="py-3 px-5 text-xs">
                           {r.matchState === 'matched' ? (
-                            <span className="inline-flex items-center gap-1 text-[#3D914C] font-semibold">
+                            <span className="inline-flex items-center gap-1 text-[#3E7B27] font-semibold">
                               <CheckCircle2 className="w-3.5 h-3.5" /> Siap diimpor
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[#C44750] font-semibold">
+                            <span className="inline-flex items-center gap-1 text-[#D13447] font-semibold">
                               <AlertTriangle className="w-3.5 h-3.5" /> {r.error}
                             </span>
                           )}
@@ -366,8 +362,8 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
             <form onSubmit={handlePreviewStatus} className="space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <FileSpreadsheet className="w-5 h-5 text-[#3D914C]" />
-                  <h2 className="text-base font-bold text-[#181A17]">
+                  <FileSpreadsheet className="w-5 h-5 text-[#3E7B27]" />
+                  <h2 className="font-display text-base font-bold text-[#20251D]">
                     Impor Pembaruan Status Mahasiswa
                   </h2>
                 </div>
@@ -382,9 +378,9 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
                 </Button>
               </div>
 
-              <p className="text-xs text-[#73796C]">
-                Kolom wajib: <span className="font-bold text-[#181A17]">NIM</span> dan{' '}
-                <span className="font-bold text-[#181A17]">Status</span> (Hijau/Lulus, Netral/Aktif,
+              <p className="text-xs text-[#4E5849]">
+                Kolom wajib: <span className="font-bold text-[#20251D]">NIM</span> dan{' '}
+                <span className="font-bold text-[#20251D]">Status</span> (Hijau/Lulus, Netral/Aktif,
                 atau Merah/AFK). Pencocokan selalu menggunakan NIM dan memerlukan konfirmasi admin sebelum disimpan.
               </p>
 
@@ -393,7 +389,7 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
                   type="file"
                   accept=".xlsx,.xls,.csv"
                   onChange={(e) => setStatusFile(e.target.files?.[0] ?? null)}
-                  className="text-xs text-[#73796C]"
+                  className="text-xs text-[#4E5849]"
                 />
               </div>
 
@@ -406,18 +402,17 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
 
           {statusPreview && (
             <Card className="p-0 overflow-hidden">
-              <div className="p-6 border-b border-[#DDE6C9] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="p-6 border-b border-[#D5E4B6] flex flex-col tablet:flex-row tablet:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-base font-bold text-[#181A17]">
+                  <h3 className="font-display text-base font-bold text-[#20251D]">
                     Preview Status: {statusPreview.fileName}
                   </h3>
-                  <p className="text-xs text-[#73796C] tabular-nums mt-0.5">
+                  <p className="text-xs text-[#6F7B68] tabular-nums mt-0.5">
                     Cocok: {statusPreview.summary.matched} · Tidak Ditemukan:{' '}
                     {statusPreview.summary.notFound} · Tidak Valid: {statusPreview.summary.invalid}
                   </p>
                 </div>
                 <Button
-                  variant="secondary"
                   disabled={committing || statusPreview.summary.matched === 0}
                   onClick={handleCommitStatus}
                 >
@@ -433,7 +428,7 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
+                    <tr className="border-b border-[#D5E4B6] bg-[#F0F8DF]/70 text-xs font-semibold text-[#6F7B68]">
                       <th className="py-3 px-5">Baris</th>
                       <th className="py-3 px-4">NIM</th>
                       <th className="py-3 px-4">Mahasiswa</th>
@@ -442,29 +437,29 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
                       <th className="py-3 px-5">Validasi</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#DDE6C9]/60">
+                  <tbody className="divide-y divide-[#D5E4B6]/70">
                     {statusPreview.rows.map((r: any, idx: number) => (
-                      <tr key={idx} className="hover:bg-[#F0F8E0]/40">
-                        <td className="py-3 px-5 text-xs text-[#73796C] tabular-nums">
+                      <tr key={idx} className="hover:bg-[#F0F8DF]/45">
+                        <td className="py-3 px-5 text-xs text-[#6F7B68] tabular-nums">
                           {r.rowNumber}
                         </td>
-                        <td className="py-3 px-4 text-xs font-semibold text-[#181A17] tabular-nums">
+                        <td className="py-3 px-4 text-xs font-semibold text-[#20251D] tabular-nums">
                           {r.nim || '—'}
                         </td>
-                        <td className="py-3 px-4 font-medium text-[#181A17]">
+                        <td className="py-3 px-4 font-medium text-[#20251D]">
                           {r.full_name || '—'}
                         </td>
-                        <td className="py-3 px-4 uppercase text-xs text-[#73796C]">
+                        <td className="py-3 px-4 uppercase text-xs text-[#6F7B68]">
                           {r.current_status || '—'}
                         </td>
-                        <td className="py-3 px-4 uppercase text-xs font-bold text-[#3D914C]">
+                        <td className="py-3 px-4 uppercase text-xs font-bold text-[#3E7B27]">
                           {r.new_status || r.rawStatus || '—'}
                         </td>
                         <td className="py-3 px-5 text-xs">
                           {r.matchState === 'matched' ? (
-                            <span className="text-[#3D914C] font-semibold">Valid</span>
+                            <span className="text-[#3E7B27] font-semibold">Valid</span>
                           ) : (
-                            <span className="text-[#C44750] font-semibold">{r.error}</span>
+                            <span className="text-[#D13447] font-semibold">{r.error}</span>
                           )}
                         </td>
                       </tr>
@@ -480,9 +475,9 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
       {/* TAB 3: IMPORT HISTORY */}
       {tab === 'history' && (
         <Card className="p-0 overflow-hidden">
-          <div className="px-6 py-5 border-b border-[#DDE6C9] flex items-center gap-2">
-            <History className="w-4 h-4 text-[#3D914C]" />
-            <h2 className="text-base font-bold text-[#181A17]">Riwayat Impor Excel</h2>
+          <div className="px-6 py-5 border-b border-[#D5E4B6] flex items-center gap-2">
+            <History className="w-4 h-4 text-[#3E7B27]" />
+            <h2 className="font-display text-base font-bold text-[#20251D]">Riwayat Impor Excel</h2>
           </div>
 
           {loading ? (
@@ -490,14 +485,14 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
               <TableSkeleton rows={5} />
             </div>
           ) : history.length === 0 ? (
-            <div className="py-12 text-center text-sm text-[#73796C]">
+            <div className="py-12 text-center text-sm text-[#6F7B68]">
               Belum ada riwayat impor Excel.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-sm">
                 <thead>
-                  <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
+                  <tr className="border-b border-[#D5E4B6] bg-[#F0F8DF]/70 text-xs font-semibold text-[#6F7B68]">
                     <th className="py-3 px-5">Waktu</th>
                     <th className="py-3 px-4">Jenis</th>
                     <th className="py-3 px-4">Nama File</th>
@@ -507,26 +502,26 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
                     <th className="py-3 px-5">Admin</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DDE6C9]/60">
+                <tbody className="divide-y divide-[#D5E4B6]/70">
                   {history.map((h) => (
-                    <tr key={h.id} className="hover:bg-[#F0F8E0]/40">
-                      <td className="py-3 px-5 text-xs text-[#73796C] tabular-nums whitespace-nowrap">
+                    <tr key={h.id} className="hover:bg-[#F0F8DF]/45">
+                      <td className="py-3 px-5 text-xs text-[#6F7B68] tabular-nums whitespace-nowrap">
                         {String(h.created_at).slice(0, 16).replace('T', ' ')}
                       </td>
-                      <td className="py-3 px-4 text-xs font-bold uppercase text-[#3D914C]">
+                      <td className="py-3 px-4 text-xs font-bold uppercase text-[#3E7B27]">
                         {h.import_type === 'attendance' ? 'Absensi' : 'Status Mahasiswa'}
                       </td>
-                      <td className="py-3 px-4 font-semibold text-[#181A17]">{h.file_name}</td>
-                      <td className="py-3 px-4 text-right tabular-nums text-[#73796C]">
+                      <td className="py-3 px-4 font-semibold text-[#20251D]">{h.file_name}</td>
+                      <td className="py-3 px-4 text-right tabular-nums text-[#6F7B68]">
                         {h.total_rows}
                       </td>
-                      <td className="py-3 px-4 text-right text-[#3D914C] font-bold tabular-nums">
+                      <td className="py-3 px-4 text-right text-[#3E7B27] font-bold tabular-nums">
                         {h.matched_rows}
                       </td>
-                      <td className="py-3 px-4 text-right text-[#73796C] tabular-nums">
+                      <td className="py-3 px-4 text-right text-[#6F7B68] tabular-nums">
                         {h.skipped_rows}
                       </td>
-                      <td className="py-3 px-5 text-xs text-[#73796C]">
+                      <td className="py-3 px-5 text-xs text-[#6F7B68]">
                         {h.imported_by_name ?? 'Admin'}
                       </td>
                     </tr>

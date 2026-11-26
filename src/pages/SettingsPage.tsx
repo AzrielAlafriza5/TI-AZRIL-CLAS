@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Save, Database, ShieldAlert, Plus, Trash2, Sparkles } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
 import { isSupabaseBrowserConfigured } from '../lib/supabase.ts';
-import { Card, Button, Input } from '../components/ui/DesignSystem.tsx';
+import { Button, Card, Input, PageHeader } from '../components/ui/DesignSystem.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
 import type { SystemSettings } from '../types/index.ts';
 
@@ -79,33 +79,32 @@ export function SettingsPage({ onToast }: SettingsPageProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#181A17] tracking-tight">Pengaturan Sistem</h1>
-          <p className="text-sm text-[#73796C] mt-1">
-            Konfigurasi bobot poin akademik, reward EXP streak, batas level, integrasi Supabase, dan audit log.
-          </p>
-        </div>
-
-        <Button
-          variant="secondary"
-          size="sm"
-          disabled={seeding}
-          onClick={handleSeedTemplate}
-        >
-          <Sparkles className="w-4 h-4" />
-          <span>{seeding ? 'Memuat...' : 'Muat Template Kurikulum Awal'}</span>
-        </Button>
-      </div>
+      <PageHeader
+        title="Pengaturan Sistem"
+        description="Konfigurasi bobot poin akademik, reward EXP streak, batas level, integrasi Supabase, dan audit log."
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={seeding}
+            onClick={handleSeedTemplate}
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>{seeding ? 'Memuat...' : 'Muat Template Kurikulum Awal'}</span>
+          </Button>
+        }
+      />
 
       {/* Supabase & Deployment Readiness Card */}
       <Card variant="soft" className="flex items-start gap-3">
-        <Database className="w-5 h-5 text-[#181A17] mt-0.5 shrink-0" />
+        <div className="w-10 h-10 rounded-2xl bg-white border border-[#D5E4B6] text-[#20251D] flex items-center justify-center shrink-0">
+          <Database className="w-5 h-5" />
+        </div>
         <div>
-          <h2 className="text-sm font-bold text-[#181A17]">
+          <h2 className="font-display text-sm font-bold text-[#20251D]">
             Status Koneksi Database & Deployment
           </h2>
-          <p className="text-xs text-[#181A17]/80 mt-1">
+          <p className="text-xs text-[#20251D]/85 mt-1">
             Frontend Supabase Key:{' '}
             <span className="font-bold">
               {isSupabaseBrowserConfigured ? 'Terhubung' : 'Belum diisi (Mode Lokal SQLite Aktif)'}
@@ -117,7 +116,7 @@ export function SettingsPage({ onToast }: SettingsPageProps) {
                 : 'Menunggu env SUPABASE_URL & SUPABASE_SERVICE_ROLE_KEY'}
             </span>
           </p>
-          <p className="text-xs text-[#73796C] mt-1">
+          <p className="text-xs text-[#4E5849] mt-1">
             SQL migration tersedia di supabase/migrations/0001_initial_schema.sql dan panduan di
             docs/DEPLOYMENT_VERCEL_SUPABASE.md.
           </p>
@@ -125,10 +124,12 @@ export function SettingsPage({ onToast }: SettingsPageProps) {
       </Card>
 
       <form onSubmit={handleSave} className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 desktop:grid-cols-2 gap-6">
           {/* Point Rules */}
           <Card className="space-y-4">
-            <h2 className="text-base font-bold text-[#181A17]">Konfigurasi Poin Akademik</h2>
+            <h2 className="font-display text-base font-bold text-[#20251D]">
+              Konfigurasi Poin Akademik
+            </h2>
             <div className="grid grid-cols-2 gap-4">
               {[
                 { key: 'hadir', label: 'Absen Hadir' },
@@ -140,7 +141,7 @@ export function SettingsPage({ onToast }: SettingsPageProps) {
                 { key: 'discussion', label: 'Kontribusi Diskusi' },
               ].map((item) => (
                 <div key={item.key}>
-                  <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+                  <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                     {item.label}
                   </label>
                   <Input
@@ -161,10 +162,12 @@ export function SettingsPage({ onToast }: SettingsPageProps) {
 
           {/* EXP Rules */}
           <Card className="space-y-4">
-            <h2 className="text-base font-bold text-[#181A17]">Konfigurasi EXP & Streak Reward</h2>
+            <h2 className="font-display text-base font-bold text-[#20251D]">
+              Konfigurasi EXP & Streak Reward
+            </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+                <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                   EXP Login Harian (Daily)
                 </label>
                 <Input
@@ -181,7 +184,7 @@ export function SettingsPage({ onToast }: SettingsPageProps) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+                <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                   Bonus Streak 7 Hari (Weekly)
                 </label>
                 <Input
@@ -198,7 +201,7 @@ export function SettingsPage({ onToast }: SettingsPageProps) {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+                <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
                   Bonus Streak 30 Hari (Monthly)
                 </label>
                 <Input
@@ -220,8 +223,10 @@ export function SettingsPage({ onToast }: SettingsPageProps) {
 
         {/* Level Thresholds */}
         <Card className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-[#181A17]">Batas Akumulasi Level Mahasiswa</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-base font-bold text-[#20251D]">
+              Batas Akumulasi Level Mahasiswa
+            </h2>
             <Button
               type="button"
               variant="secondary"
@@ -246,14 +251,16 @@ export function SettingsPage({ onToast }: SettingsPageProps) {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 tablet:grid-cols-2 desktop:grid-cols-3 gap-3">
             {settings.levels.map((lvl, idx) => (
               <div
                 key={idx}
-                className="border border-[#DDE6C9] bg-[#F0F8E0]/50 rounded-2xl p-3.5 space-y-2.5"
+                className="border border-[#D5E4B6] bg-[#F0F8DF]/60 rounded-[20px] p-3.5 space-y-2.5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-[#3D914C]">Level {lvl.level}</span>
+                  <span className="font-display text-xs font-bold text-[#3E7B27]">
+                    Level {lvl.level}
+                  </span>
                   {settings.levels.length > 1 && idx === settings.levels.length - 1 && (
                     <button
                       type="button"
@@ -263,7 +270,7 @@ export function SettingsPage({ onToast }: SettingsPageProps) {
                           levels: settings.levels.slice(0, -1),
                         })
                       }
-                      className="text-[#73796C] hover:text-[#C44750]"
+                      className="text-[#6F7B68] hover:text-[#D13447] cursor-pointer"
                       aria-label="Hapus level terakhir"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -308,37 +315,41 @@ export function SettingsPage({ onToast }: SettingsPageProps) {
 
       {/* Audit Logs */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-6 py-5 border-b border-[#DDE6C9] flex items-center gap-2">
-          <ShieldAlert className="w-4 h-4 text-[#3D914C]" />
-          <h2 className="text-base font-bold text-[#181A17]">Audit Log Aktivitas Penting</h2>
+        <div className="px-6 py-5 border-b border-[#D5E4B6] flex items-center gap-2">
+          <ShieldAlert className="w-4 h-4 text-[#3E7B27]" />
+          <h2 className="font-display text-base font-bold text-[#20251D]">
+            Audit Log Aktivitas Penting
+          </h2>
         </div>
 
         {auditLogs.length === 0 ? (
-          <div className="py-10 text-center text-sm text-[#73796C]">Belum ada audit log.</div>
+          <div className="py-10 text-center text-sm text-[#6F7B68]">Belum ada audit log.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-[#73796C] font-semibold">
+                <tr className="border-b border-[#D5E4B6] bg-[#F0F8DF]/70 text-[#6F7B68] font-semibold">
                   <th className="py-3 px-5">Waktu</th>
                   <th className="py-3 px-4">Aktor</th>
                   <th className="py-3 px-4">Aksi</th>
-                  <th className="py-3 px-4">Target</th>
+                  <th className="py-3 px-4 hidden tablet:table-cell">Target</th>
                   <th className="py-3 px-5">Detail</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#DDE6C9]/60">
+              <tbody className="divide-y divide-[#D5E4B6]/60">
                 {auditLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-[#F0F8E0]/40">
-                    <td className="py-3 px-5 text-[#73796C] tabular-nums whitespace-nowrap">
+                  <tr key={log.id} className="hover:bg-[#F0F8DF]/50 transition-colors">
+                    <td className="py-3 px-5 text-[#6F7B68] tabular-nums whitespace-nowrap">
                       {String(log.created_at).slice(0, 16).replace('T', ' ')}
                     </td>
-                    <td className="py-3 px-4 font-bold text-[#181A17]">
+                    <td className="py-3 px-4 font-display font-bold text-[#20251D]">
                       {log.actor_name ?? 'Sistem'}
                     </td>
-                    <td className="py-3 px-4 font-bold text-[#3D914C]">{log.action}</td>
-                    <td className="py-3 px-4 text-[#73796C]">{log.target_type}</td>
-                    <td className="py-3 px-5 text-[#73796C] truncate max-w-xs">{log.details}</td>
+                    <td className="py-3 px-4 font-bold text-[#3E7B27]">{log.action}</td>
+                    <td className="py-3 px-4 text-[#4E5849] hidden tablet:table-cell">
+                      {log.target_type}
+                    </td>
+                    <td className="py-3 px-5 text-[#4E5849] truncate max-w-xs">{log.details}</td>
                   </tr>
                 ))}
               </tbody>

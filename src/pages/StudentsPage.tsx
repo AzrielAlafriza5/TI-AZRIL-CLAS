@@ -7,9 +7,18 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
+  Users,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
-import { Card, Button, Input, Select, SearchBar } from '../components/ui/DesignSystem.tsx';
+import {
+  Card,
+  Button,
+  Input,
+  Select,
+  SearchBar,
+  PageHeader,
+  EmptyState,
+} from '../components/ui/DesignSystem.tsx';
 import { Modal, ConfirmDialog } from '../components/ui/Modal.tsx';
 import { StudentStatusIndicator } from '../components/ui/StatusBadge.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
@@ -206,18 +215,16 @@ export function StudentsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#181A17] tracking-tight">Manajemen Mahasiswa</h1>
-          <p className="text-sm text-[#73796C] mt-1">
-            Buat akun mahasiswa (username & password awal otomatis menggunakan NIM), kelola kelas, dan reset password.
-          </p>
-        </div>
-        <Button onClick={openCreateModal} disabled={classes.length === 0}>
-          <Plus className="w-4 h-4" />
-          <span>Tambah Mahasiswa</span>
-        </Button>
-      </div>
+      <PageHeader
+        title="Data & Manajemen Mahasiswa"
+        description="Buat akun mahasiswa (username & password awal otomatis menggunakan NIM), kelola kelas, dan reset password."
+        actions={
+          <Button onClick={openCreateModal} disabled={classes.length === 0}>
+            <Plus className="w-4 h-4" />
+            <span>Tambah Mahasiswa</span>
+          </Button>
+        }
+      />
 
       {/* Filters Bar */}
       <Card className="p-4 flex flex-wrap items-center gap-3">
@@ -286,24 +293,30 @@ export function StudentsPage({
             <TableSkeleton rows={6} />
           </div>
         ) : students.length === 0 ? (
-          <div className="p-12 text-center">
-            <p className="text-sm text-[#73796C]">
-              {classes.length === 0
+          <EmptyState
+            icon={<Users className="w-5 h-5" />}
+            title={
+              classes.length === 0
+                ? 'Belum ada kelas tersedia'
+                : 'Mahasiswa tidak ditemukan'
+            }
+            description={
+              classes.length === 0
                 ? 'Buat Program Studi dan Kelas terlebih dahulu sebelum menambahkan mahasiswa.'
-                : 'Tidak ada mahasiswa yang cocok dengan kriteria pencarian.'}
-            </p>
-            {classes.length > 0 && (
-              <Button onClick={openCreateModal} className="mt-4">
-                Tambah Mahasiswa Pertama
-              </Button>
-            )}
-          </div>
+                : 'Tidak ada mahasiswa yang cocok dengan kriteria pencarian.'
+            }
+            action={
+              classes.length > 0 ? (
+                <Button onClick={openCreateModal}>Tambah Mahasiswa Pertama</Button>
+              ) : undefined
+            }
+          />
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
+                  <tr className="border-b border-[#D5E4B6] bg-[#F0F8DF]/70 text-xs font-semibold text-[#6F7B68]">
                     <th className="py-3.5 px-5">NIM</th>
                     <th className="py-3.5 px-4">Nama Lengkap</th>
                     <th className="py-3.5 px-4">Program Studi / Kelas</th>
@@ -314,35 +327,35 @@ export function StudentsPage({
                     <th className="py-3.5 px-5 text-right">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DDE6C9]/60 text-sm">
+                <tbody className="divide-y divide-[#D5E4B6]/70 text-sm">
                   {students.map((s) => (
-                    <tr key={s.id} className="hover:bg-[#F0F8E0]/50 transition-colors">
-                      <td className="py-3.5 px-5 text-xs font-semibold text-[#73796C] tabular-nums">
+                    <tr key={s.id} className="hover:bg-[#F0F8DF]/50 transition-colors">
+                      <td className="py-3.5 px-5 text-xs font-semibold text-[#6F7B68] tabular-nums">
                         {s.nim}
                       </td>
-                      <td className="py-3.5 px-4 font-bold text-[#181A17]">
+                      <td className="py-3.5 px-4 font-display font-bold text-[#20251D]">
                         <button
                           type="button"
                           onClick={() => onSelectStudent(s.id)}
-                          className="hover:text-[#3D914C] hover:underline text-left"
+                          className="hover:text-[#3E7B27] hover:underline text-left cursor-pointer"
                         >
                           {s.full_name}
                         </button>
                       </td>
-                      <td className="py-3.5 px-4 text-xs text-[#73796C]">
-                        <div className="font-semibold text-[#181A17]">{s.class_name}</div>
+                      <td className="py-3.5 px-4 text-xs text-[#6F7B68]">
+                        <div className="font-semibold text-[#20251D]">{s.class_name}</div>
                         <div>{s.study_program_name}</div>
                       </td>
                       <td className="py-3.5 px-4">
                         <StudentStatusIndicator status={s.status} />
                       </td>
-                      <td className="py-3.5 px-4 text-right font-bold text-[#3D914C] tabular-nums">
+                      <td className="py-3.5 px-4 text-right font-bold text-[#3E7B27] tabular-nums">
                         {s.total_points}
                       </td>
-                      <td className="py-3.5 px-4 text-right text-xs tabular-nums text-[#73796C]">
-                        <span className="font-bold text-[#181A17]">{s.total_exp}</span> · Lv.{s.current_level}
+                      <td className="py-3.5 px-4 text-right text-xs tabular-nums text-[#6F7B68]">
+                        <span className="font-bold text-[#20251D]">{s.total_exp}</span> · Lv.{s.current_level}
                       </td>
-                      <td className="py-3.5 px-4 text-right text-xs font-semibold text-[#181A17] tabular-nums">
+                      <td className="py-3.5 px-4 text-right text-xs font-semibold text-[#FF7A1A] tabular-nums">
                         {s.current_streak ?? 0}d
                       </td>
                       <td className="py-3.5 px-5 text-right">
@@ -351,7 +364,7 @@ export function StudentsPage({
                             type="button"
                             onClick={() => onSelectStudent(s.id)}
                             title="Lihat detail mahasiswa"
-                            className="p-2 rounded-full text-[#73796C] hover:text-[#3D914C] hover:bg-[#DBECB8]"
+                            className="p-2 rounded-full text-[#6F7B68] hover:text-[#3E7B27] hover:bg-[#DCECB8] cursor-pointer"
                           >
                             <Eye className="w-4 h-4" />
                           </button>
@@ -359,7 +372,7 @@ export function StudentsPage({
                             type="button"
                             onClick={() => openEditModal(s)}
                             title="Edit biodata"
-                            className="p-2 rounded-full text-[#73796C] hover:text-[#181A17] hover:bg-[#F0F8E0]"
+                            className="p-2 rounded-full text-[#6F7B68] hover:text-[#20251D] hover:bg-[#F0F8DF] cursor-pointer"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
@@ -370,7 +383,7 @@ export function StudentsPage({
                               setResetModal({ open: true, student: s });
                             }}
                             title="Reset password mahasiswa"
-                            className="p-2 rounded-full text-[#73796C] hover:text-[#D8A33D] hover:bg-[#D8A33D]/15"
+                            className="p-2 rounded-full text-[#6F7B68] hover:text-[#C27C0A] hover:bg-[#C27C0A]/15 cursor-pointer"
                           >
                             <KeyRound className="w-4 h-4" />
                           </button>
@@ -378,7 +391,7 @@ export function StudentsPage({
                             type="button"
                             onClick={() => setDeleteTarget(s)}
                             title="Hapus mahasiswa"
-                            className="p-2 rounded-full text-[#73796C] hover:text-[#C44750] hover:bg-[#FCECEF]"
+                            className="p-2 rounded-full text-[#6F7B68] hover:text-[#D13447] hover:bg-[#D13447]/10 cursor-pointer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -391,7 +404,7 @@ export function StudentsPage({
             </div>
 
             {/* Pagination */}
-            <div className="px-5 py-4 border-t border-[#DDE6C9] flex items-center justify-between text-xs text-[#73796C]">
+            <div className="px-5 py-4 border-t border-[#D5E4B6] flex items-center justify-between text-xs text-[#6F7B68]">
               <span className="tabular-nums font-medium">
                 Total {totalCount} mahasiswa · Halaman {page} dari {totalPages}
               </span>
@@ -400,7 +413,7 @@ export function StudentsPage({
                   type="button"
                   disabled={page <= 1}
                   onClick={() => setPage((p) => p - 1)}
-                  className="p-2 rounded-full border border-[#DDE6C9] bg-white disabled:opacity-40 hover:border-[#B5D45D]"
+                  className="p-2 rounded-full border border-[#D5E4B6] bg-white disabled:opacity-40 hover:border-[#B5D45D] cursor-pointer"
                   aria-label="Halaman sebelumnya"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -409,7 +422,7 @@ export function StudentsPage({
                   type="button"
                   disabled={page >= totalPages}
                   onClick={() => setPage((p) => p + 1)}
-                  className="p-2 rounded-full border border-[#DDE6C9] bg-white disabled:opacity-40 hover:border-[#B5D45D]"
+                  className="p-2 rounded-full border border-[#D5E4B6] bg-white disabled:opacity-40 hover:border-[#B5D45D] cursor-pointer"
                   aria-label="Halaman berikutnya"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -433,7 +446,7 @@ export function StudentsPage({
       >
         <form onSubmit={handleSaveStudent} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Nama Lengkap</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Nama Lengkap</label>
             <Input
               type="text"
               required
@@ -443,7 +456,7 @@ export function StudentsPage({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">NIM</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">NIM</label>
             <Input
               type="text"
               required
@@ -454,7 +467,7 @@ export function StudentsPage({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Program Studi
             </label>
             <Select
@@ -476,7 +489,7 @@ export function StudentsPage({
             </Select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Kelas Aktif</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Kelas Aktif</label>
             <Select
               required
               value={formState.class_id}
@@ -519,7 +532,7 @@ export function StudentsPage({
       >
         <form onSubmit={handleResetPassword} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Password Baru (Opsional)
             </label>
             <Input
@@ -528,7 +541,7 @@ export function StudentsPage({
               onChange={(e) => setCustomPassword(e.target.value)}
               placeholder={`Kosongkan untuk reset ke NIM (${resetModal.student?.nim ?? ''})`}
             />
-            <p className="text-xs text-[#73796C] mt-1.5">
+            <p className="text-xs text-[#6F7B68] mt-1.5">
               Jika dikosongkan, password otomatis direset ke NIM mahasiswa.
             </p>
           </div>

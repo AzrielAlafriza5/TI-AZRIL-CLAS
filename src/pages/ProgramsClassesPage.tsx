@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, Building2, Users, ArrowRightLeft } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
-import { Card, Button, Input, Select, Textarea } from '../components/ui/DesignSystem.tsx';
+import {
+  Card,
+  Button,
+  Input,
+  Select,
+  Textarea,
+  PageHeader,
+  EmptyState,
+} from '../components/ui/DesignSystem.tsx';
 import { Modal, ConfirmDialog } from '../components/ui/Modal.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
 import { StudentStatusIndicator } from '../components/ui/StatusBadge.tsx';
@@ -199,64 +207,62 @@ export function ProgramsClassesPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[#181A17] tracking-tight">
-            {initialFocus === 'classes' ? 'Manajemen Kelas & Anggota' : 'Program Studi & Kelas'}
-          </h1>
-          <p className="text-sm text-[#73796C] mt-1">
-            Kelola struktur program studi, kelas aktif, dan penempatan mahasiswa.
-          </p>
-        </div>
-        <div className="flex items-center gap-2.5">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setProgForm({ code: '', name: '', description: '' });
-              setProgModal({ open: true, editing: null });
-            }}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Prodi</span>
-          </Button>
-          <Button
-            onClick={() => {
-              setClassForm({
-                study_program_id: programs[0]?.id ?? '',
-                name: '',
-                academic_year: '2026/2027',
-                description: '',
-              });
-              setClassModal({ open: true, editing: null });
-            }}
-            disabled={programs.length === 0}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Tambah Kelas</span>
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title={initialFocus === 'classes' ? 'Manajemen Kelas & Anggota' : 'Program Studi & Kelas'}
+        description="Kelola struktur program studi, kelas aktif, dan penempatan mahasiswa."
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setProgForm({ code: '', name: '', description: '' });
+                setProgModal({ open: true, editing: null });
+              }}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Prodi</span>
+            </Button>
+            <Button
+              onClick={() => {
+                setClassForm({
+                  study_program_id: programs[0]?.id ?? '',
+                  name: '',
+                  academic_year: '2026/2027',
+                  description: '',
+                });
+                setClassModal({ open: true, editing: null });
+              }}
+              disabled={programs.length === 0}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Tambah Kelas</span>
+            </Button>
+          </>
+        }
+      />
 
       {loading ? (
         <TableSkeleton rows={6} />
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 desktop:grid-cols-12 gap-5">
           {/* Study Programs */}
           <Card
-            className={`lg:col-span-5 ${
-              initialFocus === 'programs' ? 'ring-2 ring-[#B5D45D]/60' : ''
+            className={`desktop:col-span-5 ${
+              initialFocus === 'programs' ? 'border-[#B5D45D]' : ''
             }`}
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-[#3D914C]" />
-                <h2 className="text-base font-bold text-[#181A17]">Program Studi</h2>
+                <div className="w-8 h-8 rounded-xl bg-[#DCECB8] text-[#3E7B27] flex items-center justify-center">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <h2 className="font-display text-base font-bold text-[#20251D]">Program Studi</h2>
               </div>
               {selectedProgramId && (
                 <button
                   type="button"
                   onClick={() => setSelectedProgramId('')}
-                  className="text-xs font-semibold text-[#3D914C] hover:underline"
+                  className="text-xs font-display font-semibold text-[#3E7B27] hover:underline cursor-pointer"
                 >
                   Tampilkan Semua
                 </button>
@@ -264,34 +270,38 @@ export function ProgramsClassesPage({
             </div>
 
             {programs.length === 0 ? (
-              <div className="py-10 text-center text-sm text-[#73796C]">
-                Belum ada program studi. Klik &quot;Tambah Prodi&quot; untuk memulai.
-              </div>
+              <EmptyState
+                icon={<Building2 className="w-5 h-5" />}
+                title="Belum ada program studi"
+                description='Klik "Tambah Prodi" untuk memulai menyusun struktur program studi.'
+              />
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {programs.map((p) => {
                   const active = selectedProgramId === p.id;
                   return (
                     <div
                       key={p.id}
-                      className={`p-3.5 rounded-2xl border transition-colors flex items-start justify-between gap-3 ${
+                      className={`p-3.5 rounded-[18px] border transition-colors flex items-start justify-between gap-3 ${
                         active
-                          ? 'bg-[#DBECB8] border-[#B5D45D]'
-                          : 'bg-[#F0F8E0]/50 border-[#DDE6C9] hover:border-[#B5D45D]'
+                          ? 'bg-[#DCECB8] border-[#B5D45D]'
+                          : 'bg-[#F0F8DF]/55 border-[#D5E4B6] hover:border-[#B5D45D]'
                       }`}
                     >
                       <button
                         type="button"
                         onClick={() => setSelectedProgramId(active ? '' : p.id)}
-                        className="text-left flex-1 min-w-0"
+                        className="text-left flex-1 min-w-0 cursor-pointer"
                       >
                         <div className="flex items-center gap-2">
-                          <span className="px-2 py-0.5 rounded-full bg-white border border-[#DDE6C9] text-[11px] font-bold text-[#181A17]">
+                          <span className="px-2.5 py-0.5 rounded-full bg-white border border-[#D5E4B6] text-[11px] font-display font-bold text-[#20251D]">
                             {p.code}
                           </span>
-                          <span className="text-sm font-bold text-[#181A17] truncate">{p.name}</span>
+                          <span className="font-display text-sm font-bold text-[#20251D] truncate">
+                            {p.name}
+                          </span>
                         </div>
-                        <div className="text-xs text-[#73796C] mt-1.5 tabular-nums">
+                        <div className="text-xs text-[#6F7B68] mt-1.5 tabular-nums">
                           {p.class_count ?? 0} Kelas · {p.student_count ?? 0} Mahasiswa
                         </div>
                       </button>
@@ -302,7 +312,7 @@ export function ProgramsClassesPage({
                             setProgForm({ code: p.code, name: p.name, description: p.description });
                             setProgModal({ open: true, editing: p });
                           }}
-                          className="p-2 rounded-full text-[#73796C] hover:text-[#181A17] hover:bg-white"
+                          className="p-2 rounded-full text-[#6F7B68] hover:text-[#20251D] hover:bg-white transition-colors cursor-pointer"
                           aria-label={`Edit ${p.name}`}
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -310,7 +320,7 @@ export function ProgramsClassesPage({
                         <button
                           type="button"
                           onClick={() => setDeleteTarget({ type: 'program', id: p.id, name: p.name })}
-                          className="p-2 rounded-full text-[#73796C] hover:text-[#C44750] hover:bg-[#FCECEF]"
+                          className="p-2 rounded-full text-[#6F7B68] hover:text-[#D13447] hover:bg-[#D13447]/10 transition-colors cursor-pointer"
                           aria-label={`Hapus ${p.name}`}
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -325,29 +335,31 @@ export function ProgramsClassesPage({
 
           {/* Classes */}
           <Card
-            className={`lg:col-span-7 p-0 overflow-hidden ${
-              initialFocus === 'classes' ? 'ring-2 ring-[#B5D45D]/60' : ''
+            className={`desktop:col-span-7 p-0 overflow-hidden ${
+              initialFocus === 'classes' ? 'border-[#B5D45D]' : ''
             }`}
           >
-            <div className="px-6 py-5 border-b border-[#DDE6C9] flex items-center justify-between">
+            <div className="px-6 py-5 border-b border-[#D5E4B6] flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-[#3D914C]" />
-                <h2 className="text-base font-bold text-[#181A17]">Daftar Kelas</h2>
+                <div className="w-8 h-8 rounded-xl bg-[#DCECB8] text-[#3E7B27] flex items-center justify-center">
+                  <Users className="w-4 h-4" />
+                </div>
+                <h2 className="font-display text-base font-bold text-[#20251D]">Daftar Kelas</h2>
               </div>
-              <span className="text-xs font-semibold text-[#73796C] tabular-nums">
+              <span className="text-xs font-semibold text-[#6F7B68] tabular-nums">
                 {displayedClasses.length} Kelas
               </span>
             </div>
 
             {displayedClasses.length === 0 ? (
-              <div className="py-10 text-center text-sm text-[#73796C]">
+              <div className="py-10 text-center text-sm text-[#6F7B68]">
                 Belum ada kelas pada filter ini.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
+                    <tr className="border-b border-[#D5E4B6] bg-[#F0F8DF]/70 text-xs font-semibold text-[#6F7B68]">
                       <th className="py-3 px-5">Nama Kelas</th>
                       <th className="py-3 px-4">Program Studi</th>
                       <th className="py-3 px-4">Tahun</th>
@@ -355,23 +367,23 @@ export function ProgramsClassesPage({
                       <th className="py-3 px-5 text-right">Aksi</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#DDE6C9]/60 text-sm">
+                  <tbody className="divide-y divide-[#D5E4B6]/70 text-sm">
                     {displayedClasses.map((c) => (
-                      <tr key={c.id} className="hover:bg-[#F0F8E0]/50 transition-colors">
-                        <td className="py-3.5 px-5 font-bold text-[#181A17]">
+                      <tr key={c.id} className="hover:bg-[#F0F8DF]/50 transition-colors">
+                        <td className="py-3.5 px-5 font-display font-bold text-[#20251D]">
                           <button
                             type="button"
                             onClick={() => loadRoster(c)}
-                            className="hover:text-[#3D914C] hover:underline text-left"
+                            className="hover:text-[#3E7B27] hover:underline text-left cursor-pointer"
                           >
                             {c.name}
                           </button>
                         </td>
-                        <td className="py-3.5 px-4 text-[#73796C]">{c.study_program_name}</td>
-                        <td className="py-3.5 px-4 text-xs text-[#73796C] tabular-nums">
+                        <td className="py-3.5 px-4 text-[#4E5849]">{c.study_program_name}</td>
+                        <td className="py-3.5 px-4 text-xs text-[#6F7B68] tabular-nums">
                           {c.academic_year}
                         </td>
-                        <td className="py-3.5 px-4 text-right font-bold text-[#181A17] tabular-nums">
+                        <td className="py-3.5 px-4 text-right font-bold text-[#20251D] tabular-nums">
                           {c.student_count ?? 0}
                         </td>
                         <td className="py-3.5 px-5 text-right">
@@ -379,7 +391,7 @@ export function ProgramsClassesPage({
                             <button
                               type="button"
                               onClick={() => loadRoster(c)}
-                              className="px-3 py-1 text-xs font-semibold text-[#181A17] bg-[#DBECB8] hover:bg-[#B5D45D] rounded-full whitespace-nowrap transition-colors"
+                              className="font-display px-3 py-1 text-xs font-semibold text-[#171A17] bg-[#DCECB8] hover:bg-[#B5D45D] rounded-full whitespace-nowrap transition-colors cursor-pointer"
                             >
                               Anggota
                             </button>
@@ -394,7 +406,7 @@ export function ProgramsClassesPage({
                                 });
                                 setClassModal({ open: true, editing: c });
                               }}
-                              className="p-2 rounded-full text-[#73796C] hover:text-[#181A17] hover:bg-[#F0F8E0]"
+                              className="p-2 rounded-full text-[#6F7B68] hover:text-[#20251D] hover:bg-[#F0F8DF] cursor-pointer"
                               aria-label={`Edit ${c.name}`}
                             >
                               <Pencil className="w-3.5 h-3.5" />
@@ -402,7 +414,7 @@ export function ProgramsClassesPage({
                             <button
                               type="button"
                               onClick={() => setDeleteTarget({ type: 'class', id: c.id, name: c.name })}
-                              className="p-2 rounded-full text-[#73796C] hover:text-[#C44750] hover:bg-[#FCECEF]"
+                              className="p-2 rounded-full text-[#6F7B68] hover:text-[#D13447] hover:bg-[#D13447]/10 cursor-pointer"
                               aria-label={`Hapus ${c.name}`}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -422,12 +434,12 @@ export function ProgramsClassesPage({
       {/* Selected Class Roster */}
       {rosterClass && (
         <Card className="p-0 overflow-hidden">
-          <div className="px-6 py-5 border-b border-[#DDE6C9] flex items-center justify-between">
+          <div className="px-6 py-5 border-b border-[#D5E4B6] flex items-center justify-between gap-3">
             <div>
-              <h3 className="text-base font-bold text-[#181A17]">
+              <h3 className="font-display text-base font-bold text-[#20251D]">
                 Daftar Mahasiswa — {rosterClass.name}
               </h3>
-              <p className="text-xs text-[#73796C]">
+              <p className="text-xs text-[#6F7B68]">
                 {rosterClass.study_program_name} · Klik nama untuk detail atau pindah kelas
               </p>
             </div>
@@ -441,14 +453,14 @@ export function ProgramsClassesPage({
               <TableSkeleton rows={4} />
             </div>
           ) : rosterStudents.length === 0 ? (
-            <div className="py-10 text-center text-sm text-[#73796C]">
+            <div className="py-10 text-center text-sm text-[#6F7B68]">
               Belum ada mahasiswa di kelas {rosterClass.name}.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
+                  <tr className="border-b border-[#D5E4B6] bg-[#F0F8DF]/70 text-xs font-semibold text-[#6F7B68]">
                     <th className="py-3 px-5">NIM</th>
                     <th className="py-3 px-4">Nama Mahasiswa</th>
                     <th className="py-3 px-4">Status</th>
@@ -457,15 +469,15 @@ export function ProgramsClassesPage({
                     <th className="py-3 px-5 text-right">Aksi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#DDE6C9]/60 text-sm">
+                <tbody className="divide-y divide-[#D5E4B6]/70 text-sm">
                   {rosterStudents.map((s) => (
-                    <tr key={s.id} className="hover:bg-[#F0F8E0]/50 transition-colors">
-                      <td className="py-3 px-5 text-xs text-[#73796C] tabular-nums">{s.nim}</td>
-                      <td className="py-3 px-4 font-bold text-[#181A17]">
+                    <tr key={s.id} className="hover:bg-[#F0F8DF]/50 transition-colors">
+                      <td className="py-3 px-5 text-xs text-[#6F7B68] tabular-nums">{s.nim}</td>
+                      <td className="py-3 px-4 font-display font-bold text-[#20251D]">
                         <button
                           type="button"
                           onClick={() => onSelectStudent(s.id)}
-                          className="hover:text-[#3D914C] hover:underline"
+                          className="hover:text-[#3E7B27] hover:underline cursor-pointer text-left"
                         >
                           {s.full_name}
                         </button>
@@ -473,10 +485,10 @@ export function ProgramsClassesPage({
                       <td className="py-3 px-4">
                         <StudentStatusIndicator status={s.status} />
                       </td>
-                      <td className="py-3 px-4 text-right font-bold text-[#181A17] tabular-nums">
+                      <td className="py-3 px-4 text-right font-bold text-[#20251D] tabular-nums">
                         {s.total_points}
                       </td>
-                      <td className="py-3 px-4 text-right text-[#73796C] tabular-nums">
+                      <td className="py-3 px-4 text-right text-[#6F7B68] tabular-nums">
                         {s.total_exp}
                       </td>
                       <td className="py-3 px-5 text-right">
@@ -509,7 +521,7 @@ export function ProgramsClassesPage({
       >
         <form onSubmit={handleSaveProgram} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Kode Prodi</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Kode Prodi</label>
             <Input
               type="text"
               required
@@ -519,7 +531,7 @@ export function ProgramsClassesPage({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Nama Program Studi
             </label>
             <Input
@@ -531,7 +543,7 @@ export function ProgramsClassesPage({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Deskripsi</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Deskripsi</label>
             <Textarea
               rows={3}
               value={progForm.description}
@@ -561,7 +573,7 @@ export function ProgramsClassesPage({
       >
         <form onSubmit={handleSaveClass} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Program Studi</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Program Studi</label>
             <Select
               required
               value={classForm.study_program_id}
@@ -577,7 +589,7 @@ export function ProgramsClassesPage({
             </Select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Nama Kelas</label>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">Nama Kelas</label>
             <Input
               type="text"
               required
@@ -587,7 +599,7 @@ export function ProgramsClassesPage({
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Tahun Akademik
             </label>
             <Input
@@ -624,7 +636,7 @@ export function ProgramsClassesPage({
       >
         <form onSubmit={handleMoveStudent} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
               Pilih Kelas Tujuan
             </label>
             <Select
