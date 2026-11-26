@@ -8,6 +8,7 @@ import {
   Trash2,
   CheckSquare,
   FileText,
+  Sparkles,
 } from 'lucide-react';
 import { apiFetch, downloadProtectedFile, uploadFileToServer } from '../lib/api.ts';
 import {
@@ -71,6 +72,7 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
   });
 
   const [deleteTarget, setDeleteTarget] = useState<Assignment | null>(null);
+  const [autoGradeTarget, setAutoGradeTarget] = useState<Assignment | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = async () => {
@@ -211,6 +213,31 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
     }
   };
 
+  const handleAutoGrade = async () => {
+    if (!autoGradeTarget) return;
+    setSubmitting(true);
+    try {
+      const res = await apiFetch<{ gradedCount: number; awardedPoints: number }>(
+        `/api/assignments/${autoGradeTarget.id}/auto-grade`,
+        { method: 'POST' }
+      );
+      onToast(
+        'success',
+        `Koreksi otomatis selesai: ${res.gradedCount} pengumpulan mahasiswa menerima +${res.awardedPoints} poin.`
+      );
+      const targetId = autoGradeTarget.id;
+      setAutoGradeTarget(null);
+      await loadData();
+      if (selectedAssignment?.id === targetId) {
+        await openSubmissions(selectedAssignment);
+      }
+    } catch (err: any) {
+      onToast('error', err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -309,6 +336,22 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                         {a.submission_count ?? 0} masuk · {a.graded_count ?? 0} dinilai
                       </div>
                     </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={(a.submission_count ?? 0) <= (a.graded_count ?? 0)}
+                      onClick={() => setAutoGradeTarget(a)}
+                      title={
+                        (a.submission_count ?? 0) === 0
+                          ? 'Belum ada mahasiswa yang mengumpulkan'
+                          : (a.submission_count ?? 0) <= (a.graded_count ?? 0)
+                            ? 'Semua pengumpulan sudah dinilai'
+                            : 'Koreksi otomatis dan beri +100 poin ke pengumpul yang belum dinilai'
+                      }
+                    >
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span>Koreksi Otomatis (+100 Poin)</span>
+                    </Button>
                     <Button size="sm" onClick={() => openSubmissions(a)}>
                       <CheckSquare className="w-3.5 h-3.5" />
                       <span>Periksa & Nilai</span>
@@ -375,9 +418,21 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
                 Poin akademik baru ditambahkan setelah Admin menilai pengumpulan.
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => setSelectedAssignment(null)}>
-              Tutup Panel
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {submissions.some((s) => s.submission_id && s.status !== 'graded') && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setAutoGradeTarget(selectedAssignment)}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Koreksi Otomatis (+100 Poin)</span>
+                </Button>
+              )}
+              <Button variant="outline" size="sm" onClick={() => setSelectedAssignment(null)}>
+                Tutup Panel
+              </Button>
+            </div>
           </div>
 
           {loadingSubs ? (
@@ -754,6 +809,21 @@ export function AssignmentsPage({ user, onToast }: AssignmentsPageProps) {
         loading={submitting}
         onConfirm={handleDeleteAssignment}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={Boolean(autoGradeTarget)}
+        title="Koreksi Otomatis (+100 Poin)"
+        description={
+          autoGradeTarget
+            ? `Sebanyak ${Math.max(0, (autoGradeTarget.submission_count ?? 0) - (autoGradeTarget.graded_count ?? 0))} pengumpulan yang belum dinilai pada tugas "${autoGradeTarget.title}" akan otomatis dinilai 100 dan memperoleh tambahan +100 poin akademik.`
+            : ''
+        }
+        confirmLabel="Jalankan Koreksi Otomatis"
+        danger={false}
+        loading={submitting}
+        onConfirm={handleAutoGrade}
+        onCancel={() => setAutoGradeTarget(null)}
       />
     </div>
   );

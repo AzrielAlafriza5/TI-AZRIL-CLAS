@@ -479,6 +479,125 @@ learningRouter.post('/submissions/:id/grade', requireAdmin, (req: AuthedRequest,
   res.json({ ok: true });
 });
 
+learningRouter.post('/assignments/:id/auto-grade', requireAdmin, (req: AuthedRequest, res) => {
+  const assignment = db
+    .prepare(`SELECT id, title FROM assignments WHERE id = ?`)
+    .get(req.params.id) as { id: string; title: string } | undefined;
+
+  if (!assignment) {
+    res.status(404).json({ error: 'Tugas tidak ditemukan.' });
+    return;
+  }
+
+  const allSubmissions = db
+    .prepare(`
+      SELECT sub.*, s.profile_id AS student_profile_id, s.full_name AS student_name
+      FROM submissions sub
+      JOIN students s ON s.id = sub.student_id
+      WHERE sub.assignment_id = ?
+    `)
+    .all(assignment.id) as Array<{
+      id: string;
+      student_id: string;
+      student_profile_id: string;
+      student_name: string;
+      status: string;
+      awarded_points: number;
+      admin_notes: string;
+    }>;
+
+  if (allSubmissions.length === 0) {
+    res.status(400).json({ error: 'Belum ada mahasiswa yang mengumpulkan tugas ini.' });
+    return;
+  }
+
+  const pendingSubmissions = allSubmissions.filter((sub) => sub.status !== 'graded');
+  if (pendingSubmissions.length === 0) {
+    res.status(400).json({ error: 'Semua pengumpulan pada tugas ini sudah dinilai.' });
+    return;
+  }
+
+  const autoPoints = 100;
+  const autoScore = 100;
+
+  withTransaction(() => {
+    for (const sub of pendingSubmissions) {
+      const prevPoints = Number(sub.awarded_points ?? 0);
+      const delta = autoPoints - prevPoints;
+      const notes = sub.admin_notes?.trim()
+        ? sub.admin_notes.trim()
+        : 'Dikoreksi otomatis (+100 poin)';
+
+      db.prepare(`
+        UPDATE submissions
+        SET status = 'graded',
+            score = ?,
+            awarded_points = ?,
+            admin_notes = ?,
+            graded_at = datetime('now'),
+            graded_by = ?
+        WHERE id = ?
+      `).run(autoScore, autoPoints, notes, req.auth!.profileId, sub.id);
+
+      if (delta !== 0) {
+        const hasOrig = db
+          .prepare(`
+            SELECT id FROM point_transactions
+            WHERE student_id = ? AND source = 'assignment' AND reference_type = 'submission' AND reference_id = ?
+          `)
+          .get(sub.student_id, sub.id);
+
+        if (!hasOrig) {
+          db.prepare(`
+            INSERT INTO point_transactions (id, student_id, amount, source, description, reference_type, reference_id, admin_id)
+            VALUES (?, ?, ?, 'assignment', ?, 'submission', ?, ?)
+          `).run(
+            crypto.randomUUID(),
+            sub.student_id,
+            autoPoints,
+            `Koreksi otomatis tugas "${assignment.title}"`,
+            sub.id,
+            req.auth!.profileId
+          );
+        } else {
+          db.prepare(`
+            INSERT INTO point_transactions (id, student_id, amount, source, description, reference_type, reference_id, admin_id)
+            VALUES (?, ?, ?, 'adjustment', ?, 'submission_adjust', ?, ?)
+          `).run(
+            crypto.randomUUID(),
+            sub.student_id,
+            delta,
+            `Koreksi otomatis tugas "${assignment.title}" (${prevPoints} → ${autoPoints} poin)`,
+            `${sub.id}:${Date.now()}`,
+            req.auth!.profileId
+          );
+        }
+
+        recalculateStudentTotals(sub.student_id);
+      }
+
+      createNotification(
+        sub.student_profile_id,
+        `Tugas Dinilai: ${assignment.title}`,
+        `Tugas Anda telah dikoreksi otomatis (${autoScore}/100) dan memperoleh +${autoPoints} poin akademik.`,
+        'grade'
+      );
+    }
+
+    logAudit(req.auth!.profileId, 'AUTO_GRADE_ASSIGNMENT', 'assignment', assignment.id, {
+      title: assignment.title,
+      gradedCount: pendingSubmissions.length,
+      awardedPoints: autoPoints,
+    });
+  });
+
+  res.json({
+    ok: true,
+    gradedCount: pendingSubmissions.length,
+    awardedPoints: autoPoints,
+  });
+});
+
 // ---------------------------------------------------------------------------
 // LEARNING MATERIALS (MATERI PEMBELAJARAN)
 // ---------------------------------------------------------------------------
