@@ -545,9 +545,20 @@ adminRouter.post('/students', (req: AuthedRequest, res) => {
   const nim = String(req.body?.nim ?? '').trim();
   const studyProgramId = String(req.body?.study_program_id ?? '').trim();
   const classId = String(req.body?.class_id ?? '').trim();
+  const rawStatus = String(req.body?.status ?? 'netral').trim();
+  const status = (['netral', 'hijau', 'merah'].includes(rawStatus) ? rawStatus : '') as
+    | 'netral'
+    | 'hijau'
+    | 'merah'
+    | '';
 
   if (!fullName || !nim || !studyProgramId || !classId) {
     res.status(400).json({ error: 'Nama lengkap, NIM, program studi, dan kelas wajib diisi.' });
+    return;
+  }
+
+  if (!status) {
+    res.status(400).json({ error: 'Status mahasiswa harus Aktif (netral), Lulus (hijau), atau AFK (merah).' });
     return;
   }
 
@@ -573,15 +584,22 @@ adminRouter.post('/students', (req: AuthedRequest, res) => {
 
       db.prepare(`
         INSERT INTO students (id, profile_id, nim, full_name, study_program_id, class_id, status)
-        VALUES (?, ?, ?, ?, ?, ?, 'netral')
-      `).run(studentId, profileId, nim, fullName, studyProgramId, classId);
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `).run(studentId, profileId, nim, fullName, studyProgramId, classId, status);
 
       db.prepare(`
         INSERT INTO login_streaks (id, student_id, current_streak, best_streak, total_login_days)
         VALUES (?, ?, 0, 0, 0)
       `).run(crypto.randomUUID(), studentId);
 
-      logAudit(req.auth!.profileId, 'CREATE_STUDENT', 'student', studentId, { nim, fullName, classId });
+      if (status !== 'netral') {
+        db.prepare(`
+          INSERT INTO student_status_history (id, student_id, previous_status, new_status, reason, source, changed_by)
+          VALUES (?, ?, 'netral', ?, 'Label status awal saat pendaftaran akun mahasiswa', 'manual', ?)
+        `).run(crypto.randomUUID(), studentId, status, req.auth!.profileId);
+      }
+
+      logAudit(req.auth!.profileId, 'CREATE_STUDENT', 'student', studentId, { nim, fullName, classId, status });
     });
 
     res.status(201).json({
@@ -589,6 +607,7 @@ adminRouter.post('/students', (req: AuthedRequest, res) => {
       profile_id: profileId,
       nim,
       full_name: fullName,
+      status,
       initial_credentials: { username: nim, initial_password_hint: 'Sama dengan NIM' },
     });
   } catch {
@@ -688,7 +707,7 @@ adminRouter.get('/students/:id', (req, res) => {
 
 adminRouter.patch('/students/:id', (req: AuthedRequest, res) => {
   const student = db.prepare(`SELECT * FROM students WHERE id = ?`).get(req.params.id) as
-    | { id: string; profile_id: string; nim: string; full_name: string; study_program_id: string; class_id: string }
+    | { id: string; profile_id: string; nim: string; full_name: string; study_program_id: string; class_id: string; status: 'netral' | 'hijau' | 'merah' }
     | undefined;
   if (!student) {
     res.status(404).json({ error: 'Mahasiswa tidak ditemukan.' });
@@ -699,9 +718,20 @@ adminRouter.patch('/students/:id', (req: AuthedRequest, res) => {
   const nim = String(req.body?.nim ?? student.nim).trim();
   const studyProgramId = String(req.body?.study_program_id ?? student.study_program_id).trim();
   const classId = String(req.body?.class_id ?? student.class_id).trim();
+  const rawStatus = req.body?.status !== undefined ? String(req.body.status).trim() : student.status;
+  const status = (['netral', 'hijau', 'merah'].includes(rawStatus) ? rawStatus : '') as
+    | 'netral'
+    | 'hijau'
+    | 'merah'
+    | '';
 
   if (!fullName || !nim) {
     res.status(400).json({ error: 'Nama dan NIM tidak boleh kosong.' });
+    return;
+  }
+
+  if (!status) {
+    res.status(400).json({ error: 'Status mahasiswa tidak valid.' });
     return;
   }
 
@@ -722,11 +752,18 @@ adminRouter.patch('/students/:id', (req: AuthedRequest, res) => {
 
       db.prepare(`
         UPDATE students
-        SET nim = ?, full_name = ?, study_program_id = ?, class_id = ?, updated_at = datetime('now')
+        SET nim = ?, full_name = ?, study_program_id = ?, class_id = ?, status = ?, updated_at = datetime('now')
         WHERE id = ?
-      `).run(nim, fullName, studyProgramId, classId, student.id);
+      `).run(nim, fullName, studyProgramId, classId, status, student.id);
 
-      logAudit(req.auth!.profileId, 'UPDATE_STUDENT', 'student', student.id, { nim, fullName, classId });
+      if (status !== student.status) {
+        db.prepare(`
+          INSERT INTO student_status_history (id, student_id, previous_status, new_status, reason, source, changed_by)
+          VALUES (?, ?, ?, ?, 'Diperbarui dari form edit biodata mahasiswa', 'manual', ?)
+        `).run(crypto.randomUUID(), student.id, student.status, status, req.auth!.profileId);
+      }
+
+      logAudit(req.auth!.profileId, 'UPDATE_STUDENT', 'student', student.id, { nim, fullName, classId, status });
     });
     res.json({ ok: true });
   } catch {

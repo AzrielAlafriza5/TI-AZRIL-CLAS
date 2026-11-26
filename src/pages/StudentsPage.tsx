@@ -22,7 +22,7 @@ import {
 import { Modal, ConfirmDialog } from '../components/ui/Modal.tsx';
 import { StudentStatusIndicator } from '../components/ui/StatusBadge.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
-import type { StudentProfile } from '../types/index.ts';
+import type { StudentProfile, StudentStatus } from '../types/index.ts';
 
 interface StudentsPageProps {
   initialSearch?: string;
@@ -60,6 +60,7 @@ export function StudentsPage({
     nim: '',
     study_program_id: '',
     class_id: '',
+    status: 'netral' as StudentStatus,
   });
 
   // Reset Password Modal
@@ -133,6 +134,7 @@ export function StudentsPage({
       nim: '',
       study_program_id: defaultProdi,
       class_id: defaultCls,
+      status: 'netral',
     });
     setFormModal({ open: true, editing: null });
   };
@@ -143,6 +145,7 @@ export function StudentsPage({
       nim: s.nim,
       study_program_id: s.study_program_id,
       class_id: s.class_id,
+      status: s.status,
     });
     setFormModal({ open: true, editing: s });
   };
@@ -503,6 +506,50 @@ export function StudentsPage({
                 </option>
               ))}
             </Select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#4E5849] mb-1.5">
+              Status Mahasiswa
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                {
+                  id: 'netral' as StudentStatus,
+                  label: 'Mahasiswa Aktif',
+                  short: 'Aktif',
+                  activeCls: 'bg-[#171A17] border-[#171A17] text-[#B5D45D]',
+                },
+                {
+                  id: 'hijau' as StudentStatus,
+                  label: 'Lulus',
+                  short: 'Hijau',
+                  activeCls: 'bg-[#DCECB8] border-[#3E7B27] text-[#3E7B27]',
+                },
+                {
+                  id: 'merah' as StudentStatus,
+                  label: 'AFK',
+                  short: 'Merah',
+                  activeCls: 'bg-[#D13447]/15 border-[#D13447] text-[#D13447]',
+                },
+              ].map((opt) => {
+                const selected = formState.status === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setFormState({ ...formState, status: opt.id })}
+                    className={`px-3 py-2.5 rounded-[16px] border text-center transition-all cursor-pointer ${
+                      selected
+                        ? `${opt.activeCls} font-bold`
+                        : 'bg-white border-[#D5E4B6] text-[#4E5849] hover:border-[#B5D45D]'
+                    }`}
+                  >
+                    <div className="font-display text-xs font-bold leading-tight">{opt.label}</div>
+                    <div className="text-[10px] opacity-80 mt-0.5">{opt.short}</div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button
