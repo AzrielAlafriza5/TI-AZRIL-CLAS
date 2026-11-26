@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { db, withTransaction } from './db.ts';
+import { syncAdminFromSupabase } from './supabase.ts';
 import type { LevelThreshold, SystemSettings } from '../src/types/index.ts';
 
 const SESSION_SECRET = process.env.SESSION_SECRET?.trim() || crypto.randomBytes(32).toString('hex');
@@ -100,74 +101,85 @@ export interface AuthedRequest extends Request {
   };
 }
 
-export function requireAuth(req: AuthedRequest, res: Response, next: NextFunction): void {
-  const authHeader = req.headers.authorization;
-  let token: string | null = null;
-  let usedCookie = false;
+export async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const authHeader = req.headers.authorization;
+    let token: string | null = null;
+    let usedCookie = false;
 
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    token = authHeader.slice(7).trim();
-  } else {
-    token = parseCookieToken(req);
-    usedCookie = Boolean(token);
-  }
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.slice(7).trim();
+    } else {
+      token = parseCookieToken(req);
+      usedCookie = Boolean(token);
+    }
 
-  if (!token) {
-    res.status(401).json({ error: 'Sesi autentikasi diperlukan. Silakan login terlebih dahulu.' });
-    return;
-  }
+    if (!token) {
+      res.status(401).json({ error: 'Sesi autentikasi diperlukan. Silakan login terlebih dahulu.' });
+      return;
+    }
 
-  // CSRF Origin verification on state-changing requests authenticated via cookie
-  if (usedCookie && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
-    const origin = req.headers.origin;
-    const host = (req.headers['x-forwarded-host'] as string) || req.headers.host;
-    if (origin && host) {
-      try {
-        const originHost = new URL(origin).host;
-        if (originHost !== host) {
+    // CSRF Origin verification on state-changing requests authenticated via cookie
+    if (usedCookie && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
+      const origin = req.headers.origin;
+      const host = (req.headers['x-forwarded-host'] as string) || req.headers.host;
+      if (origin && host) {
+        try {
+          const originHost = new URL(origin).host;
+          if (originHost !== host) {
+            res.status(403).json({ error: 'Origin tidak valid.' });
+            return;
+          }
+        } catch {
           res.status(403).json({ error: 'Origin tidak valid.' });
           return;
         }
-      } catch {
-        res.status(403).json({ error: 'Origin tidak valid.' });
-        return;
       }
     }
+
+    const payload = verifySessionToken(token);
+    if (!payload) {
+      res.status(401).json({ error: 'Token sesi tidak valid atau sudah kedaluwarsa.' });
+      return;
+    }
+
+    let profile = db
+      .prepare(`SELECT id, username, full_name, role FROM profiles WHERE id = ?`)
+      .get(payload.sub) as { id: string; username: string; full_name: string; role: 'admin' | 'student' } | undefined;
+
+    if (!profile && payload.role === 'admin') {
+      await syncAdminFromSupabase();
+      profile = db
+        .prepare(`SELECT id, username, full_name, role FROM profiles WHERE id = ?`)
+        .get(payload.sub) as { id: string; username: string; full_name: string; role: 'admin' | 'student' } | undefined;
+    }
+
+    if (!profile) {
+      res.status(401).json({ error: 'Akun tidak ditemukan.' });
+      return;
+    }
+
+    let studentInfo: { id: string; class_id: string; study_program_id: string } | undefined;
+    if (profile.role === 'student') {
+      studentInfo = db
+        .prepare(`SELECT id, class_id, study_program_id FROM students WHERE profile_id = ?`)
+        .get(profile.id) as { id: string; class_id: string; study_program_id: string } | undefined;
+    }
+
+    req.auth = {
+      profileId: profile.id,
+      role: profile.role,
+      username: profile.username,
+      fullName: profile.full_name,
+      studentId: studentInfo?.id,
+      classId: studentInfo?.class_id,
+      studyProgramId: studentInfo?.study_program_id,
+    };
+
+    next();
+  } catch (err) {
+    next(err);
   }
-
-  const payload = verifySessionToken(token);
-  if (!payload) {
-    res.status(401).json({ error: 'Token sesi tidak valid atau sudah kedaluwarsa.' });
-    return;
-  }
-
-  const profile = db
-    .prepare(`SELECT id, username, full_name, role FROM profiles WHERE id = ?`)
-    .get(payload.sub) as { id: string; username: string; full_name: string; role: 'admin' | 'student' } | undefined;
-
-  if (!profile) {
-    res.status(401).json({ error: 'Akun tidak ditemukan.' });
-    return;
-  }
-
-  let studentInfo: { id: string; class_id: string; study_program_id: string } | undefined;
-  if (profile.role === 'student') {
-    studentInfo = db
-      .prepare(`SELECT id, class_id, study_program_id FROM students WHERE profile_id = ?`)
-      .get(profile.id) as { id: string; class_id: string; study_program_id: string } | undefined;
-  }
-
-  req.auth = {
-    profileId: profile.id,
-    role: profile.role,
-    username: profile.username,
-    fullName: profile.full_name,
-    studentId: studentInfo?.id,
-    classId: studentInfo?.class_id,
-    studyProgramId: studentInfo?.study_program_id,
-  };
-
-  next();
 }
 
 export function requireAdmin(req: AuthedRequest, res: Response, next: NextFunction): void {

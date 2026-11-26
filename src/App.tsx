@@ -109,6 +109,17 @@ export default function App() {
     setUser(null);
     setActiveRoute('dashboard');
     setSelectedStudentId(null);
+    try {
+      const status = await apiFetch<{ adminProvisioned: boolean; adminManagedByEnv?: boolean }>(
+        '/api/auth/status'
+      );
+      if (typeof status?.adminProvisioned === 'boolean') {
+        setAdminProvisioned(status.adminProvisioned);
+      }
+      setAdminManagedByEnv(Boolean(status?.adminManagedByEnv));
+    } catch {
+      // ignore
+    }
   };
 
   const handleSelectStudent = (studentId: string) => {

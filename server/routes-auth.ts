@@ -12,7 +12,11 @@ import {
   setSessionCookie,
   signSessionToken,
 } from './auth.ts';
-import { isSupabaseServerConfigured } from './supabase.ts';
+import {
+  isSupabaseServerConfigured,
+  saveAdminToSupabase,
+  syncAdminFromSupabase,
+} from './supabase.ts';
 
 export const authRouter = Router();
 
@@ -51,7 +55,8 @@ function buildUserResponse(profileId: string) {
   };
 }
 
-authRouter.get('/status', (_req, res) => {
+authRouter.get('/status', async (_req, res) => {
+  await syncAdminFromSupabase();
   const admin = db.prepare(`SELECT id FROM profiles WHERE role = 'admin' LIMIT 1`).get();
   res.json({
     adminProvisioned: Boolean(admin),
@@ -61,13 +66,14 @@ authRouter.get('/status', (_req, res) => {
   });
 });
 
-authRouter.post('/bootstrap-admin', (req, res) => {
+authRouter.post('/bootstrap-admin', async (req, res) => {
   const envPass = process.env.ADMIN_PASSWORD?.trim();
   if (envPass) {
     res.status(409).json({ error: 'Administrator utama telah dikonfigurasi melalui environment server.' });
     return;
   }
 
+  await syncAdminFromSupabase();
   const existing = db.prepare(`SELECT id FROM profiles WHERE role = 'admin' LIMIT 1`).get();
   if (existing) {
     res.status(409).json({ error: 'Akun administrator utama sudah terdaftar dan tidak dapat ditambahkan lagi.' });
@@ -97,6 +103,14 @@ authRouter.post('/bootstrap-admin', (req, res) => {
     return;
   }
 
+  await saveAdminToSupabase({
+    id: profileId,
+    username: email,
+    fullName,
+    email,
+    passwordHash,
+  });
+
   logAudit(profileId, 'ADMIN_BOOTSTRAPPED', 'profile', profileId, { email });
 
   const token = signSessionToken(profileId, 'admin');
@@ -108,7 +122,7 @@ authRouter.post('/bootstrap-admin', (req, res) => {
   });
 });
 
-authRouter.post('/login', (req, res) => {
+authRouter.post('/login', async (req, res) => {
   const identifier = String(req.body?.identifier ?? '').trim().toLowerCase();
   const password = String(req.body?.password ?? '');
   const expectedRole = req.body?.expectedRole === 'admin' || req.body?.expectedRole === 'student'
@@ -121,6 +135,7 @@ authRouter.post('/login', (req, res) => {
       return;
     }
 
+    await syncAdminFromSupabase();
     const adminProfile = db
       .prepare(`
         SELECT id, username, email, password_hash, role
