@@ -14,6 +14,10 @@ import {
   requireAdmin,
   requireAuth,
 } from './auth.ts';
+import {
+  downloadFileFromSupabaseStorage,
+  uploadFileToSupabaseStorage,
+} from './supabase.ts';
 
 export const learningRouter = Router();
 learningRouter.use(requireAuth);
@@ -52,7 +56,7 @@ learningRouter.get('/reference/academic', (_req, res) => {
 // ---------------------------------------------------------------------------
 // SECURE FILE UPLOAD & PATH-CONFINED DOWNLOAD
 // ---------------------------------------------------------------------------
-learningRouter.post('/upload', uploadDisk.single('file'), (req, res) => {
+learningRouter.post('/upload', uploadDisk.single('file'), async (req, res) => {
   if (!req.file) {
     res.status(400).json({ error: 'Tidak ada file yang diunggah.' });
     return;
@@ -73,18 +77,27 @@ learningRouter.post('/upload', uploadDisk.single('file'), (req, res) => {
   }
 
   fs.writeFileSync(targetPath, req.file.buffer);
+  await uploadFileToSupabaseStorage(safeStoredName, req.file.buffer);
   res.json({
     file_url: `/api/files/${safeStoredName}`,
     file_name: req.file.originalname,
   });
 });
 
-learningRouter.get('/files/:filename', (req, res) => {
+learningRouter.get('/files/:filename', async (req, res) => {
   const cleanName = path.basename(String(req.params.filename ?? ''));
   const resolved = path.resolve(UPLOADS_DIR, cleanName);
-  if (!resolved.startsWith(UPLOADS_DIR + path.sep) || !fs.existsSync(resolved)) {
+  if (!resolved.startsWith(UPLOADS_DIR + path.sep)) {
     res.status(404).json({ error: 'File tidak ditemukan.' });
     return;
+  }
+  if (!fs.existsSync(resolved)) {
+    const remoteBuffer = await downloadFileFromSupabaseStorage(cleanName);
+    if (!remoteBuffer) {
+      res.status(404).json({ error: 'File tidak ditemukan.' });
+      return;
+    }
+    fs.writeFileSync(resolved, remoteBuffer);
   }
   res.download(resolved, cleanName);
 });

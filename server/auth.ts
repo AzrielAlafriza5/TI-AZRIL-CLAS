@@ -1,10 +1,9 @@
 import crypto from 'node:crypto';
 import type { Request, Response, NextFunction } from 'express';
 import { db, withTransaction } from './db.ts';
-import { syncAdminFromSupabase } from './supabase.ts';
+import { getOrCreateSharedSessionSecret, syncAdminFromSupabase } from './supabase.ts';
 import type { LevelThreshold, SystemSettings } from '../src/types/index.ts';
 
-const SESSION_SECRET = process.env.SESSION_SECRET?.trim() || crypto.randomBytes(32).toString('hex');
 export const COOKIE_NAME = 'it_azril_session';
 
 export interface TokenPayload {
@@ -13,23 +12,25 @@ export interface TokenPayload {
   exp: number;
 }
 
-export function signSessionToken(profileId: string, role: 'admin' | 'student'): string {
+export async function signSessionToken(profileId: string, role: 'admin' | 'student'): Promise<string> {
+  const secret = await getOrCreateSharedSessionSecret();
   const payload: TokenPayload = {
     sub: profileId,
     role,
     exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
   };
   const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const sig = crypto.createHmac('sha256', SESSION_SECRET).update(encoded).digest('base64url');
+  const sig = crypto.createHmac('sha256', secret).update(encoded).digest('base64url');
   return `${encoded}.${sig}`;
 }
 
-export function verifySessionToken(token: string): TokenPayload | null {
+export async function verifySessionToken(token: string): Promise<TokenPayload | null> {
   try {
+    const secret = await getOrCreateSharedSessionSecret();
     const parts = token.split('.');
     if (parts.length !== 2) return null;
     const [encoded, sig] = parts;
-    const expectedSig = crypto.createHmac('sha256', SESSION_SECRET).update(encoded).digest('base64url');
+    const expectedSig = crypto.createHmac('sha256', secret).update(encoded).digest('base64url');
     const a = Buffer.from(sig);
     const b = Buffer.from(expectedSig);
     if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
@@ -137,7 +138,7 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
       }
     }
 
-    const payload = verifySessionToken(token);
+    const payload = await verifySessionToken(token);
     if (!payload) {
       res.status(401).json({ error: 'Token sesi tidak valid atau sudah kedaluwarsa.' });
       return;

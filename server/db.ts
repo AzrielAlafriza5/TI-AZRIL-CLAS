@@ -4,8 +4,10 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 
+const IS_SERVERLESS = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
 function resolveStorageRoot(): string {
-  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+  if (IS_SERVERLESS) {
     return path.join(os.tmpdir(), 'it_azril_clas');
   }
   const localRoot = process.cwd();
@@ -28,15 +30,15 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-const DB_PATH = path.join(DATA_DIR, 'it_azril_clas.db');
+export const DB_PATH = path.join(DATA_DIR, 'it_azril_clas.db');
 
 export const db = new DatabaseSync(DB_PATH);
 
 db.exec('PRAGMA foreign_keys = ON;');
 try {
-  db.exec('PRAGMA journal_mode = WAL;');
+  db.exec(IS_SERVERLESS ? 'PRAGMA journal_mode = DELETE;' : 'PRAGMA journal_mode = WAL;');
 } catch {
-  // Fallback if filesystem does not support WAL
+  // Fallback if filesystem does not support journal mode change
 }
 
 export function hashPasswordSync(password: string): string {

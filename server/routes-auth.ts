@@ -113,7 +113,7 @@ authRouter.post('/bootstrap-admin', async (req, res) => {
 
   logAudit(profileId, 'ADMIN_BOOTSTRAPPED', 'profile', profileId, { email });
 
-  const token = signSessionToken(profileId, 'admin');
+  const token = await signSessionToken(profileId, 'admin');
   setSessionCookie(req, res, token);
 
   res.status(201).json({
@@ -152,7 +152,7 @@ authRouter.post('/login', async (req, res) => {
       return;
     }
 
-    const token = signSessionToken(adminProfile.id, 'admin');
+    const token = await signSessionToken(adminProfile.id, 'admin');
     setSessionCookie(req, res, token);
 
     res.json({
@@ -201,7 +201,7 @@ authRouter.post('/login', async (req, res) => {
     }
   }
 
-  const token = signSessionToken(profile.id, profile.role);
+  const token = await signSessionToken(profile.id, profile.role);
   setSessionCookie(req, res, token);
 
   res.json({
