@@ -71,13 +71,9 @@ export function LeaderboardPage({ user }: LeaderboardPageProps) {
   };
 
   const topThree = entries.slice(0, 3);
-  const podiumOrder: LeaderboardEntry[] =
-    topThree.length >= 3
-      ? [topThree[1], topThree[0], topThree[2]]
-      : topThree;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-24 sm:pb-0">
       <PageHeader
         title="Leaderboard"
         description="Peringkat kelas dan program studi berdasarkan total Poin Akademik."
@@ -179,98 +175,96 @@ export function LeaderboardPage({ user }: LeaderboardPageProps) {
         />
       ) : (
         <>
-          {/* Stepped Visual Podium (2 - 1 - 3 on all viewports) */}
-          <div
-            className={`grid items-end gap-2 tablet:gap-4 desktop:gap-5 pt-2 ${
-              topThree.length === 1
-                ? 'grid-cols-1 max-w-[240px] mx-auto'
-                : topThree.length === 2
-                  ? 'grid-cols-2 max-w-lg mx-auto'
-                  : 'grid-cols-[1fr_1.12fr_1fr] tablet:grid-cols-3'
-            }`}
-          >
-            {podiumOrder.map((entry) => {
+          {/* Unified 3-Column Stepped Podium (2 - 1 - 3 across all screen sizes) */}
+          <div className="grid grid-cols-3 items-end gap-2 sm:gap-6 pt-2">
+            {topThree.map((entry) => {
               const isFirst = entry.rank === 1;
               const isSecond = entry.rank === 2;
-              const stepHeight = isFirst
-                ? 'min-h-[132px] tablet:min-h-[172px] desktop:min-h-[188px]'
-                : isSecond
-                  ? 'min-h-[104px] tablet:min-h-[138px] desktop:min-h-[150px]'
-                  : 'min-h-[86px] tablet:min-h-[114px] desktop:min-h-[124px]';
 
-              const stepSurface = isFirst
-                ? 'bg-[#171A17] text-white border border-[#232822]'
+              const orderCls = isFirst
+                ? 'order-2'
                 : isSecond
-                  ? 'bg-[#DCECB8]/75 text-[#20251D] border border-[#B5D45D]'
-                  : 'bg-white text-[#20251D] border border-[#D5E4B6]';
+                  ? 'order-1'
+                  : 'order-3';
+
+              const cardStyle = isFirst
+                ? 'min-h-[175px] sm:min-h-[240px] bg-[#141612] text-white border border-[#232822]'
+                : isSecond
+                  ? 'min-h-[145px] sm:min-h-[200px] bg-[#DCECB8] text-[#20251D] border border-[#B5D45D]'
+                  : 'min-h-[130px] sm:min-h-[185px] bg-white text-[#20251D] border border-[#D5E4B6]';
 
               return (
                 <div
                   key={entry.student_id}
-                  className="flex flex-col items-center justify-end min-w-0"
+                  className={`${orderCls} ${cardStyle} rounded-[20px] sm:rounded-[26px] p-2 sm:p-5 flex flex-col items-center justify-between gap-2 text-center min-w-0 transition-all`}
                 >
-                  {/* Student Identity Above Pedestal */}
-                  <div className="flex flex-col items-center text-center px-1 pb-2.5 tablet:pb-3.5 w-full min-w-0">
+                  {/* Trophy / Medal Icon + Rank */}
+                  <div className="flex flex-col items-center gap-1 w-full min-w-0">
                     <div
-                      className={`w-10 h-10 tablet:w-12 tablet:h-12 rounded-2xl flex items-center justify-center shrink-0 mb-2 ${
+                      className={`w-7 h-7 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl flex items-center justify-center shrink-0 ${
                         isFirst
-                          ? 'bg-[#171A17] text-[#B5D45D] border-2 border-[#B5D45D]'
+                          ? 'bg-[#c5ec6c] text-[#141612]'
                           : isSecond
-                            ? 'bg-[#DCECB8] text-[#20251D] border border-[#B5D45D]'
-                            : 'bg-[#FF7A1A]/15 text-[#FF7A1A] border border-[#FF7A1A]/35'
+                            ? 'bg-white text-[#3E7B27] border border-[#B5D45D]'
+                            : 'bg-[#FF7A1A]/15 text-[#FF7A1A]'
                       }`}
                     >
                       {isFirst ? (
-                        <Trophy className="w-4 h-4 tablet:w-5 tablet:h-5" />
+                        <Trophy className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
                       ) : (
-                        <Medal className="w-4 h-4 tablet:w-5 tablet:h-5" />
+                        <Medal className="w-4 h-4 sm:w-5 sm:h-5" aria-hidden="true" />
                       )}
                     </div>
 
-                    <div className="font-display text-[11px] tablet:text-sm desktop:text-[15px] font-bold text-[#20251D] leading-snug break-words w-full">
-                      {entry.full_name}
-                    </div>
-                    <div className="text-[10px] tablet:text-xs text-[#6F7B68] leading-tight mt-0.5 break-words w-full">
-                      {entry.class_name}
-                    </div>
-                  </div>
-
-                  {/* Stepped Podium Pedestal */}
-                  <div
-                    className={`w-full rounded-t-[20px] rounded-b-[16px] tablet:rounded-t-[24px] tablet:rounded-b-[20px] px-2 py-3 tablet:px-4 tablet:py-4 flex flex-col items-center justify-between gap-2 text-center transition-all ${stepHeight} ${stepSurface}`}
-                  >
                     <div
-                      className={`font-display text-lg tablet:text-2xl font-extrabold leading-none tabular-nums ${
+                      className={`font-display text-[10px] sm:text-xs font-extrabold tracking-wide tabular-nums ${
                         isFirst
-                          ? 'text-[#B5D45D]'
+                          ? 'text-[#c5ec6c]'
                           : isSecond
                             ? 'text-[#3E7B27]'
-                            : 'text-[#FF7A1A]'
+                            : 'text-[#6F7B68]'
                       }`}
                     >
                       #{entry.rank}
                     </div>
 
+                    <div
+                      className={`font-display text-[11px] sm:text-sm font-bold leading-tight text-center line-clamp-2 w-full break-words ${
+                        isFirst ? 'text-white' : 'text-[#20251D]'
+                      }`}
+                    >
+                      {entry.full_name}
+                    </div>
+
+                    <div
+                      className={`text-[10px] sm:text-xs text-center truncate w-full ${
+                        isFirst ? 'text-[#c5ec6c]/80' : 'text-[#6F7B68]'
+                      }`}
+                    >
+                      {entry.class_name}
+                    </div>
+                  </div>
+
+                  {/* Points & Status */}
+                  <div className="flex flex-col items-center gap-1.5 w-full">
                     <div className="leading-none">
-                      <div
-                        className={`font-display text-xl tablet:text-3xl font-bold tabular-nums ${
-                          isFirst ? 'text-white' : 'text-[#20251D]'
+                      <span
+                        className={`font-display text-lg sm:text-3xl font-extrabold tabular-nums ${
+                          isFirst ? 'text-[#c5ec6c]' : 'text-[#20251D]'
                         }`}
                       >
                         {entry.period_points}
-                      </div>
-                      <div
-                        className={`text-[10px] tablet:text-xs font-semibold mt-0.5 ${
-                          isFirst ? 'text-[#DCECB8]/80' : 'text-[#6F7B68]'
+                      </span>
+                      <span
+                        className={`ml-1 text-[9px] sm:text-xs font-semibold ${
+                          isFirst ? 'text-[#c5ec6c]/80' : 'text-[#6F7B68]'
                         }`}
                       >
                         Poin
-                      </div>
+                      </span>
                     </div>
 
-                    <div className="scale-[0.88] tablet:scale-100 origin-center">
-                      <StudentStatusIndicator status={entry.status} />
-                    </div>
+                    <StudentStatusIndicator status={entry.status} compact />
                   </div>
                 </div>
               );
