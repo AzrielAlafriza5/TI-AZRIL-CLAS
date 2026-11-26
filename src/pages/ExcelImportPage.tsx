@@ -10,7 +10,9 @@ import {
 } from 'lucide-react';
 import { apiFetch, getAuthToken } from '../lib/api.ts';
 import { Card, Button, Input } from '../components/ui/DesignSystem.tsx';
+import { StudentStatusIndicator } from '../components/ui/StatusBadge.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
+import type { StudentStatus } from '../types/index.ts';
 
 interface ExcelImportPageProps {
   onToast: (type: 'success' | 'error', text: string) => void;
@@ -303,6 +305,7 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
                       <th className="py-3 px-5">Baris</th>
                       <th className="py-3 px-4">NIM</th>
                       <th className="py-3 px-4">Mahasiswa</th>
+                      <th className="py-3 px-4">Label</th>
                       <th className="py-3 px-4">Kelas</th>
                       <th className="py-3 px-4">Status</th>
                       <th className="py-3 px-4 text-right">Poin</th>
@@ -320,6 +323,13 @@ export function ExcelImportPage({ onToast }: ExcelImportPageProps) {
                         </td>
                         <td className="py-3 px-4 font-medium text-[#181A17]">
                           {r.full_name || '—'}
+                        </td>
+                        <td className="py-3 px-4">
+                          {r.student_status ? (
+                            <StudentStatusIndicator status={r.student_status as StudentStatus} />
+                          ) : (
+                            '—'
+                          )}
                         </td>
                         <td className="py-3 px-4 text-xs text-[#73796C]">{r.class_name || '—'}</td>
                         <td className="py-3 px-4 uppercase text-xs font-bold text-[#181A17]">

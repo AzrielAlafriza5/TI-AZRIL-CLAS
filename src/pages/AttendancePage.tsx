@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { CalendarCheck, Save, CheckCircle2, Clock, XCircle, Percent } from 'lucide-react';
 import { apiFetch } from '../lib/api.ts';
-import { Card, StatCard, Button, Input, Select } from '../components/ui/DesignSystem.tsx';
-import { AttendanceStatusIndicator } from '../components/ui/StatusBadge.tsx';
+import { Card, StatCard, Button, Input, Select, SearchBar } from '../components/ui/DesignSystem.tsx';
+import { AttendanceStatusIndicator, StudentStatusIndicator } from '../components/ui/StatusBadge.tsx';
 import { TableSkeleton } from '../components/ui/Skeleton.tsx';
-import type { AttendanceStatus, AuthUser } from '../types/index.ts';
+import type { AttendanceStatus, AuthUser, StudentStatus } from '../types/index.ts';
 
 interface AttendancePageProps {
   user: AuthUser;
@@ -35,6 +35,11 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
   const [meetingNumber, setMeetingNumber] = useState(1);
 
   const [roster, setRoster] = useState<Array<any>>([]);
+  const [counts, setCounts] = useState({ hijau: 0, netral: 0, merah: 0 });
+  const [includeAfk, setIncludeAfk] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'netral' | 'hijau'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
   const [statuses, setStatuses] = useState<Record<string, AttendanceStatus>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -67,13 +72,28 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
   }, [isAdmin]);
 
   const loadAttendance = async () => {
-    if (!isAdmin || !classId) return;
+    if (!isAdmin || !classId) {
+      setRoster([]);
+      setCounts({ hijau: 0, netral: 0, merah: 0 });
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const res = await apiFetch<{ students: any[] }>(
-        `/api/admin/attendance?classId=${classId}&date=${attendanceDate}&meetingNumber=${meetingNumber}`
-      );
+      const qs = new URLSearchParams({
+        classId,
+        date: attendanceDate,
+        meetingNumber: String(meetingNumber),
+        includeAfk: includeAfk ? '1' : '0',
+      });
+      const res = await apiFetch<{
+        students: Array<any & { student_status?: StudentStatus }>;
+        counts?: { hijau: number; netral: number; merah: number };
+      }>(`/api/admin/attendance?${qs.toString()}`);
       setRoster(res.students);
+      if (res.counts) {
+        setCounts(res.counts);
+      }
       const map: Record<string, AttendanceStatus> = {};
       for (const s of res.students) {
         map[s.student_id] = s.attendance_status || 'hadir';
@@ -87,13 +107,29 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
   };
 
   useEffect(() => {
-    if (isAdmin && classId) loadAttendance();
-  }, [isAdmin, classId, attendanceDate, meetingNumber]);
+    if (isAdmin) loadAttendance();
+  }, [isAdmin, classId, attendanceDate, meetingNumber, includeAfk]);
+
+  const visibleRoster = roster.filter((s) => {
+    if (statusFilter !== 'all' && s.student_status !== statusFilter) {
+      return false;
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      return (
+        String(s.full_name ?? '').toLowerCase().includes(q) ||
+        String(s.nim ?? '').toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
 
   const handleMarkAll = (st: AttendanceStatus) => {
-    const next: Record<string, AttendanceStatus> = {};
-    for (const s of roster) next[s.student_id] = st;
-    setStatuses(next);
+    setStatuses((prev) => {
+      const next = { ...prev };
+      for (const s of visibleRoster) next[s.student_id] = st;
+      return next;
+    });
   };
 
   const handleSave = async () => {
@@ -221,7 +257,7 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
       <div>
         <h1 className="text-2xl font-bold text-[#181A17] tracking-tight">Absensi Kelas Manual</h1>
         <p className="text-sm text-[#73796C] mt-1">
-          Pilih program studi, kelas, tanggal, dan pertemuan. Poin kehadiran dihitung otomatis tanpa duplikasi.
+          Mahasiswa berstatus Aktif (Netral) maupun Lulus (Hijau) tetap tersedia di daftar absen agar lulusan yang masih mengikuti kelas tetap dapat diabsen.
         </p>
       </div>
 
@@ -234,8 +270,8 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
             onChange={(e) => {
               const pid = e.target.value;
               setStudyProgramId(pid);
-              const firstCls = classes.find((c) => c.study_program_id === pid);
-              setClassId(firstCls?.id ?? '');
+              const nextClasses = pid ? classes.filter((c) => c.study_program_id === pid) : classes;
+              setClassId(nextClasses[0]?.id ?? '');
             }}
             className="w-full"
           >
@@ -283,22 +319,75 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
 
       {/* Checklist Table */}
       <Card className="p-0 overflow-hidden">
-        <div className="px-6 py-5 border-b border-[#DDE6C9] flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <CalendarCheck className="w-4 h-4 text-[#3D914C]" />
-            <span className="text-base font-bold text-[#181A17]">
-              Checklist Kehadiran ({roster.length} Mahasiswa)
-            </span>
+        <div className="px-6 py-5 border-b border-[#DDE6C9] space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <CalendarCheck className="w-4 h-4 text-[#3D914C]" />
+                <span className="text-base font-bold text-[#181A17]">
+                  Checklist Kehadiran ({visibleRoster.length} Mahasiswa)
+                </span>
+              </div>
+              {classId && (
+                <p className="text-xs text-[#73796C] mt-1 tabular-nums">
+                  Aktif: {counts.netral} · Lulus (Hijau): {counts.hijau}
+                  {counts.merah > 0 &&
+                    ` · AFK (Merah): ${counts.merah} ${includeAfk ? '(ditampilkan)' : '(disembunyikan)'}`}
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={() => handleMarkAll('hadir')}>
+                Tandai Semua Hadir
+              </Button>
+              <Button size="sm" disabled={saving || roster.length === 0} onClick={handleSave}>
+                <Save className="w-3.5 h-3.5" />
+                <span>{saving ? 'Menyimpan...' : 'Simpan Absensi'}</span>
+              </Button>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => handleMarkAll('hadir')}>
-              Tandai Semua Hadir
-            </Button>
-            <Button size="sm" disabled={saving || roster.length === 0} onClick={handleSave}>
-              <Save className="w-3.5 h-3.5" />
-              <span>{saving ? 'Menyimpan...' : 'Simpan Absensi'}</span>
-            </Button>
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <SearchBar
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Cari NIM atau nama..."
+                className="w-56"
+              />
+
+              <div className="flex items-center p-1 bg-[#F0F8E0]/60 border border-[#DDE6C9] rounded-full">
+                {[
+                  { id: 'all', label: 'Semua' },
+                  { id: 'netral', label: 'Aktif' },
+                  { id: 'hijau', label: 'Lulus (Hijau)' },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setStatusFilter(opt.id as 'all' | 'netral' | 'hijau')}
+                    className={`px-3 py-1 text-xs font-semibold rounded-full transition-colors whitespace-nowrap ${
+                      statusFilter === opt.id
+                        ? 'bg-[#181A17] text-white'
+                        : 'text-[#73796C] hover:text-[#181A17]'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="inline-flex items-center gap-2 text-xs font-semibold text-[#181A17] cursor-pointer select-none px-3.5 py-2 rounded-full bg-[#F0F8E0]/60 border border-[#DDE6C9] hover:border-[#B5D45D] transition-colors">
+              <input
+                type="checkbox"
+                checked={includeAfk}
+                onChange={(e) => setIncludeAfk(e.target.checked)}
+                className="accent-[#181A17] w-3.5 h-3.5 rounded cursor-pointer"
+              />
+              <span>Tampilkan juga Mahasiswa AFK / Merah ({counts.merah})</span>
+            </label>
           </div>
         </div>
 
@@ -308,7 +397,13 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
           </div>
         ) : roster.length === 0 ? (
           <div className="p-12 text-center text-sm text-[#73796C]">
-            Pilih kelas yang memiliki mahasiswa untuk mengisi absensi.
+            {classId && counts.merah > 0 && !includeAfk
+              ? 'Semua mahasiswa di kelas ini berstatus AFK (Merah). Centang "Tampilkan juga Mahasiswa AFK / Merah" untuk menampilkannya.'
+              : 'Pilih kelas yang memiliki mahasiswa untuk mengisi absensi.'}
+          </div>
+        ) : visibleRoster.length === 0 ? (
+          <div className="p-12 text-center text-sm text-[#73796C]">
+            Tidak ada mahasiswa yang sesuai dengan filter atau pencarian.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -317,12 +412,13 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
                 <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
                   <th className="py-3.5 px-5">NIM</th>
                   <th className="py-3.5 px-5">Nama Mahasiswa</th>
+                  <th className="py-3.5 px-5">Status Mahasiswa</th>
                   <th className="py-3.5 px-5">Tercatat Sebelumnya</th>
                   <th className="py-3.5 px-5">Status Kehadiran</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#DDE6C9]/60 text-sm">
-                {roster.map((s) => {
+                {visibleRoster.map((s) => {
                   const val = statuses[s.student_id] || 'hadir';
                   return (
                     <tr key={s.student_id} className="hover:bg-[#F0F8E0]/50 transition-colors">
@@ -330,6 +426,9 @@ export function AttendancePage({ user, onToast }: AttendancePageProps) {
                         {s.nim}
                       </td>
                       <td className="py-3.5 px-5 font-bold text-[#181A17]">{s.full_name}</td>
+                      <td className="py-3.5 px-5">
+                        <StudentStatusIndicator status={(s.student_status as StudentStatus) || 'netral'} />
+                      </td>
                       <td className="py-3.5 px-5 text-xs text-[#73796C]">
                         {s.attendance_status
                           ? `${s.attendance_status.toUpperCase()} (${s.source})`

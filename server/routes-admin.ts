@@ -1023,11 +1023,24 @@ adminRouter.get('/attendance', (req, res) => {
   const classId = String(req.query.classId ?? '').trim();
   const attendanceDate = String(req.query.date ?? getJakartaDateString()).trim();
   const meetingNumber = Math.max(1, Number(req.query.meetingNumber ?? 1));
+  const includeAfk = req.query.includeAfk === '1' || req.query.includeAfk === 'true';
 
   if (!classId) {
     res.status(400).json({ error: 'classId wajib dipilih.' });
     return;
   }
+
+  const statusRows = db
+    .prepare(`SELECT status, COUNT(*) AS c FROM students WHERE class_id = ? GROUP BY status`)
+    .all(classId) as Array<{ status: StudentStatus; c: number }>;
+  const counts = { hijau: 0, netral: 0, merah: 0 };
+  for (const row of statusRows) {
+    counts[row.status] = Number(row.c);
+  }
+
+  const statusFilterSql = includeAfk
+    ? ''
+    : `AND (s.status IN ('hijau', 'netral') OR a.id IS NOT NULL)`;
 
   const students = db
     .prepare(`
@@ -1036,12 +1049,12 @@ adminRouter.get('/attendance', (req, res) => {
       FROM students s
       LEFT JOIN attendance a
         ON a.student_id = s.id AND a.attendance_date = ? AND a.meeting_number = ?
-      WHERE s.class_id = ?
+      WHERE s.class_id = ? ${statusFilterSql}
       ORDER BY s.nim ASC
     `)
     .all(attendanceDate, meetingNumber, classId);
 
-  res.json({ students, attendanceDate, meetingNumber });
+  res.json({ students, attendanceDate, meetingNumber, counts, includeAfk });
 });
 
 adminRouter.post('/attendance/manual', (req: AuthedRequest, res) => {
@@ -1063,6 +1076,11 @@ adminRouter.post('/attendance/manual', (req: AuthedRequest, res) => {
       const studentId = String(rec.student_id ?? '').trim();
       const status = String(rec.status ?? '').trim() as AttendanceStatus;
       if (!studentId || !['hadir', 'izin', 'sakit', 'alpha'].includes(status)) continue;
+
+      const belongs = db
+        .prepare(`SELECT id FROM students WHERE id = ? AND class_id = ?`)
+        .get(studentId, classId) as { id: string } | undefined;
+      if (!belongs) continue;
 
       const existing = db
         .prepare(`SELECT id, status FROM attendance WHERE student_id = ? AND attendance_date = ? AND meeting_number = ?`)
@@ -1174,13 +1192,13 @@ adminRouter.post('/import/attendance/preview', uploadMemory.single('file'), (req
 
     const student = db
       .prepare(`
-        SELECT s.id, s.nim, s.full_name, s.class_id, c.name AS class_name
+        SELECT s.id, s.nim, s.full_name, s.status AS student_status, s.class_id, c.name AS class_name
         FROM students s
         JOIN classes c ON c.id = s.class_id
         WHERE s.nim = ?
       `)
       .get(nim) as
-      | { id: string; nim: string; full_name: string; class_id: string; class_name: string }
+      | { id: string; nim: string; full_name: string; student_status: StudentStatus; class_id: string; class_name: string }
       | undefined;
 
     if (!student) {
@@ -1192,6 +1210,7 @@ adminRouter.post('/import/attendance/preview', uploadMemory.single('file'), (req
         nim,
         student_id: student.id,
         full_name: student.full_name,
+        student_status: student.student_status,
         class_name: student.class_name,
         rawStatus,
         matchState: 'invalid',
@@ -1209,6 +1228,7 @@ adminRouter.post('/import/attendance/preview', uploadMemory.single('file'), (req
         nim,
         student_id: student.id,
         full_name: student.full_name,
+        student_status: student.student_status,
         class_id: student.class_id,
         class_name: student.class_name,
         status: parsedStatus,
@@ -1223,6 +1243,7 @@ adminRouter.post('/import/attendance/preview', uploadMemory.single('file'), (req
       nim,
       student_id: student.id,
       full_name: student.full_name,
+      student_status: student.student_status,
       class_id: student.class_id,
       class_name: student.class_name,
       status: parsedStatus,
