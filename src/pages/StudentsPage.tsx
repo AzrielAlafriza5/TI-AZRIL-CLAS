@@ -1,0 +1,561 @@
+import { useEffect, useState } from 'react';
+import {
+  Plus,
+  Eye,
+  Pencil,
+  KeyRound,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
+import { apiFetch } from '../lib/api.ts';
+import { Card, Button, Input, Select, SearchBar } from '../components/ui/DesignSystem.tsx';
+import { Modal, ConfirmDialog } from '../components/ui/Modal.tsx';
+import { StudentStatusIndicator } from '../components/ui/StatusBadge.tsx';
+import { TableSkeleton } from '../components/ui/Skeleton.tsx';
+import type { StudentProfile } from '../types/index.ts';
+
+interface StudentsPageProps {
+  initialSearch?: string;
+  onToast: (type: 'success' | 'error', text: string) => void;
+  onSelectStudent: (id: string) => void;
+}
+
+export function StudentsPage({
+  initialSearch = '',
+  onToast,
+  onSelectStudent,
+}: StudentsPageProps) {
+  const [programs, setPrograms] = useState<Array<{ id: string; code: string; name: string }>>([]);
+  const [classes, setClasses] = useState<
+    Array<{ id: string; name: string; study_program_id: string }>
+  >([]);
+  const [students, setStudents] = useState<StudentProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [search, setSearch] = useState(initialSearch);
+  const [studyProgramId, setStudyProgramId] = useState('');
+  const [classId, setClassId] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+
+  // Add/Edit Student Modal
+  const [formModal, setFormModal] = useState<{ open: boolean; editing: StudentProfile | null }>({
+    open: false,
+    editing: null,
+  });
+  const [formState, setFormState] = useState({
+    full_name: '',
+    nim: '',
+    study_program_id: '',
+    class_id: '',
+  });
+
+  // Reset Password Modal
+  const [resetModal, setResetModal] = useState<{ open: boolean; student: StudentProfile | null }>({
+    open: false,
+    student: null,
+  });
+  const [customPassword, setCustomPassword] = useState('');
+
+  // Delete Confirmation
+  const [deleteTarget, setDeleteTarget] = useState<StudentProfile | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setSearch(initialSearch);
+    setPage(1);
+  }, [initialSearch]);
+
+  useEffect(() => {
+    apiFetch<{ programs: any[]; classes: any[] }>('/api/reference/academic')
+      .then((res) => {
+        setPrograms(res.programs);
+        setClasses(res.classes);
+      })
+      .catch(() => {});
+  }, []);
+
+  const loadStudents = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      if (studyProgramId) params.set('studyProgramId', studyProgramId);
+      if (classId) params.set('classId', classId);
+      if (statusFilter) params.set('status', statusFilter);
+      params.set('page', String(page));
+      params.set('limit', '15');
+
+      const res = await apiFetch<{
+        students: StudentProfile[];
+        pagination: { page: number; total: number; totalPages: number };
+      }>(`/api/admin/students?${params.toString()}`);
+
+      setStudents(res.students);
+      setTotalPages(res.pagination.totalPages);
+      setTotalCount(res.pagination.total);
+    } catch (err: any) {
+      onToast('error', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStudents();
+  }, [search, studyProgramId, classId, statusFilter, page]);
+
+  const filterClasses = studyProgramId
+    ? classes.filter((c) => c.study_program_id === studyProgramId)
+    : classes;
+
+  const formClasses = formState.study_program_id
+    ? classes.filter((c) => c.study_program_id === formState.study_program_id)
+    : classes;
+
+  const openCreateModal = () => {
+    const defaultProdi = programs[0]?.id ?? '';
+    const defaultCls = classes.find((c) => c.study_program_id === defaultProdi)?.id ?? '';
+    setFormState({
+      full_name: '',
+      nim: '',
+      study_program_id: defaultProdi,
+      class_id: defaultCls,
+    });
+    setFormModal({ open: true, editing: null });
+  };
+
+  const openEditModal = (s: StudentProfile) => {
+    setFormState({
+      full_name: s.full_name,
+      nim: s.nim,
+      study_program_id: s.study_program_id,
+      class_id: s.class_id,
+    });
+    setFormModal({ open: true, editing: s });
+  };
+
+  const handleSaveStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      if (formModal.editing) {
+        await apiFetch(`/api/admin/students/${formModal.editing.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify(formState),
+        });
+        onToast('success', 'Biodata mahasiswa berhasil diperbarui.');
+      } else {
+        await apiFetch('/api/admin/students', {
+          method: 'POST',
+          body: JSON.stringify(formState),
+        });
+        onToast(
+          'success',
+          `Akun mahasiswa "${formState.full_name}" dibuat. Username & password awal: ${formState.nim}`
+        );
+      }
+      setFormModal({ open: false, editing: null });
+      await loadStudents();
+    } catch (err: any) {
+      onToast('error', err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetModal.student) return;
+    setSubmitting(true);
+    try {
+      const res = await apiFetch<{ message: string }>(
+        `/api/admin/students/${resetModal.student.id}/reset-password`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ new_password: customPassword.trim() || undefined }),
+        }
+      );
+      onToast('success', res.message);
+      setResetModal({ open: false, student: null });
+      setCustomPassword('');
+    } catch (err: any) {
+      onToast('error', err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!deleteTarget) return;
+    setSubmitting(true);
+    try {
+      await apiFetch(`/api/admin/students/${deleteTarget.id}`, { method: 'DELETE' });
+      onToast('success', `Mahasiswa ${deleteTarget.full_name} berhasil dihapus.`);
+      setDeleteTarget(null);
+      await loadStudents();
+    } catch (err: any) {
+      onToast('error', err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#181A17] tracking-tight">Manajemen Mahasiswa</h1>
+          <p className="text-sm text-[#73796C] mt-1">
+            Buat akun mahasiswa (username & password awal otomatis menggunakan NIM), kelola kelas, dan reset password.
+          </p>
+        </div>
+        <Button onClick={openCreateModal} disabled={classes.length === 0}>
+          <Plus className="w-4 h-4" />
+          <span>Tambah Mahasiswa</span>
+        </Button>
+      </div>
+
+      {/* Filters Bar */}
+      <Card className="p-4 flex flex-wrap items-center gap-3">
+        <SearchBar
+          value={search}
+          onChange={(val) => {
+            setSearch(val);
+            setPage(1);
+          }}
+          placeholder="Cari nama mahasiswa atau NIM..."
+          className="flex-1 min-w-[220px]"
+        />
+
+        <Select
+          value={studyProgramId}
+          onChange={(e) => {
+            setStudyProgramId(e.target.value);
+            setClassId('');
+            setPage(1);
+          }}
+          className="rounded-full"
+        >
+          <option value="">Semua Program Studi</option>
+          {programs.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </Select>
+
+        <Select
+          value={classId}
+          onChange={(e) => {
+            setClassId(e.target.value);
+            setPage(1);
+          }}
+          className="rounded-full"
+        >
+          <option value="">Semua Kelas</option>
+          {filterClasses.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </Select>
+
+        <Select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          className="rounded-full"
+        >
+          <option value="">Semua Status</option>
+          <option value="hijau">Hijau — Lulus</option>
+          <option value="netral">Netral — Aktif</option>
+          <option value="merah">Merah — AFK</option>
+        </Select>
+      </Card>
+
+      {/* Table */}
+      <Card className="p-0 overflow-hidden">
+        {loading ? (
+          <div className="p-6">
+            <TableSkeleton rows={6} />
+          </div>
+        ) : students.length === 0 ? (
+          <div className="p-12 text-center">
+            <p className="text-sm text-[#73796C]">
+              {classes.length === 0
+                ? 'Buat Program Studi dan Kelas terlebih dahulu sebelum menambahkan mahasiswa.'
+                : 'Tidak ada mahasiswa yang cocok dengan kriteria pencarian.'}
+            </p>
+            {classes.length > 0 && (
+              <Button onClick={openCreateModal} className="mt-4">
+                Tambah Mahasiswa Pertama
+              </Button>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-[#DDE6C9] bg-[#F0F8E0]/60 text-xs font-semibold text-[#73796C]">
+                    <th className="py-3.5 px-5">NIM</th>
+                    <th className="py-3.5 px-4">Nama Lengkap</th>
+                    <th className="py-3.5 px-4">Program Studi / Kelas</th>
+                    <th className="py-3.5 px-4">Status</th>
+                    <th className="py-3.5 px-4 text-right">Poin</th>
+                    <th className="py-3.5 px-4 text-right">EXP / Level</th>
+                    <th className="py-3.5 px-4 text-right">Streak</th>
+                    <th className="py-3.5 px-5 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#DDE6C9]/60 text-sm">
+                  {students.map((s) => (
+                    <tr key={s.id} className="hover:bg-[#F0F8E0]/50 transition-colors">
+                      <td className="py-3.5 px-5 text-xs font-semibold text-[#73796C] tabular-nums">
+                        {s.nim}
+                      </td>
+                      <td className="py-3.5 px-4 font-bold text-[#181A17]">
+                        <button
+                          type="button"
+                          onClick={() => onSelectStudent(s.id)}
+                          className="hover:text-[#3D914C] hover:underline text-left"
+                        >
+                          {s.full_name}
+                        </button>
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-[#73796C]">
+                        <div className="font-semibold text-[#181A17]">{s.class_name}</div>
+                        <div>{s.study_program_name}</div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <StudentStatusIndicator status={s.status} />
+                      </td>
+                      <td className="py-3.5 px-4 text-right font-bold text-[#3D914C] tabular-nums">
+                        {s.total_points}
+                      </td>
+                      <td className="py-3.5 px-4 text-right text-xs tabular-nums text-[#73796C]">
+                        <span className="font-bold text-[#181A17]">{s.total_exp}</span> · Lv.{s.current_level}
+                      </td>
+                      <td className="py-3.5 px-4 text-right text-xs font-semibold text-[#181A17] tabular-nums">
+                        {s.current_streak ?? 0}d
+                      </td>
+                      <td className="py-3.5 px-5 text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => onSelectStudent(s.id)}
+                            title="Lihat detail mahasiswa"
+                            className="p-2 rounded-full text-[#73796C] hover:text-[#3D914C] hover:bg-[#DBECB8]"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(s)}
+                            title="Edit biodata"
+                            className="p-2 rounded-full text-[#73796C] hover:text-[#181A17] hover:bg-[#F0F8E0]"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCustomPassword('');
+                              setResetModal({ open: true, student: s });
+                            }}
+                            title="Reset password mahasiswa"
+                            className="p-2 rounded-full text-[#73796C] hover:text-[#D8A33D] hover:bg-[#D8A33D]/15"
+                          >
+                            <KeyRound className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(s)}
+                            title="Hapus mahasiswa"
+                            className="p-2 rounded-full text-[#73796C] hover:text-[#C44750] hover:bg-[#FCECEF]"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="px-5 py-4 border-t border-[#DDE6C9] flex items-center justify-between text-xs text-[#73796C]">
+              <span className="tabular-nums font-medium">
+                Total {totalCount} mahasiswa · Halaman {page} dari {totalPages}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                  className="p-2 rounded-full border border-[#DDE6C9] bg-white disabled:opacity-40 hover:border-[#B5D45D]"
+                  aria-label="Halaman sebelumnya"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="p-2 rounded-full border border-[#DDE6C9] bg-white disabled:opacity-40 hover:border-[#B5D45D]"
+                  aria-label="Halaman berikutnya"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </Card>
+
+      {/* Add/Edit Student Modal */}
+      <Modal
+        open={formModal.open}
+        title={formModal.editing ? 'Edit Biodata Mahasiswa' : 'Tambah Akun Mahasiswa Baru'}
+        subtitle={
+          formModal.editing
+            ? undefined
+            : 'Sistem otomatis mengatur Username = NIM dan Password awal = NIM.'
+        }
+        onClose={() => setFormModal({ open: false, editing: null })}
+      >
+        <form onSubmit={handleSaveStudent} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Nama Lengkap</label>
+            <Input
+              type="text"
+              required
+              value={formState.full_name}
+              onChange={(e) => setFormState({ ...formState, full_name: e.target.value })}
+              placeholder="Contoh: Azril Al Afriza"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">NIM</label>
+            <Input
+              type="text"
+              required
+              value={formState.nim}
+              onChange={(e) => setFormState({ ...formState, nim: e.target.value })}
+              placeholder="Contoh: 230101001"
+              className="tabular-nums"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+              Program Studi
+            </label>
+            <Select
+              required
+              value={formState.study_program_id}
+              onChange={(e) => {
+                const prodiId = e.target.value;
+                const firstCls = classes.find((c) => c.study_program_id === prodiId)?.id ?? '';
+                setFormState({ ...formState, study_program_id: prodiId, class_id: firstCls });
+              }}
+              className="w-full"
+            >
+              <option value="">Pilih Program Studi</option>
+              {programs.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">Kelas Aktif</label>
+            <Select
+              required
+              value={formState.class_id}
+              onChange={(e) => setFormState({ ...formState, class_id: e.target.value })}
+              className="w-full"
+            >
+              <option value="">Pilih Kelas</option>
+              {formClasses.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setFormModal({ open: false, editing: null })}
+            >
+              Batal
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Menyimpan...' : 'Simpan'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Reset Password Modal */}
+      <Modal
+        open={resetModal.open}
+        title="Reset Password Mahasiswa"
+        subtitle={
+          resetModal.student
+            ? `${resetModal.student.full_name} (NIM: ${resetModal.student.nim})`
+            : ''
+        }
+        onClose={() => setResetModal({ open: false, student: null })}
+      >
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div>
+            <label className="block text-xs font-semibold text-[#73796C] mb-1.5">
+              Password Baru (Opsional)
+            </label>
+            <Input
+              type="text"
+              value={customPassword}
+              onChange={(e) => setCustomPassword(e.target.value)}
+              placeholder={`Kosongkan untuk reset ke NIM (${resetModal.student?.nim ?? ''})`}
+            />
+            <p className="text-xs text-[#73796C] mt-1.5">
+              Jika dikosongkan, password otomatis direset ke NIM mahasiswa.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setResetModal({ open: false, student: null })}
+            >
+              Batal
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Memproses...' : 'Reset Password'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Hapus Akun Mahasiswa"
+        description={`Apakah Anda yakin ingin menghapus mahasiswa "${deleteTarget?.full_name}" (NIM ${deleteTarget?.nim})? Seluruh riwayat poin, absensi, dan pengumpulan tugasnya juga akan terhapus.`}
+        confirmLabel="Hapus Permanen"
+        loading={submitting}
+        onConfirm={handleDeleteStudent}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </div>
+  );
+}

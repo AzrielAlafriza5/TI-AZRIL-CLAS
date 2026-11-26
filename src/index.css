@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --color-canvas: #F0F8E0;
+  --color-lime-primary: #B5D45D;
+  --color-green-soft: #DBECB8;
+  --color-charcoal: #181A17;
+  --color-secondary: #73796C;
+  --color-border-soft: #DDE6C9;
+  --color-alert-soft: #FCECEF;
+  --color-success: #3D914C;
+  --color-danger: #C44750;
+  --color-warning: #D8A33D;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: #F0F8E0;
+    color: #181A17;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes flame-flicker {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-2px) scale(1.08);
+  }
+}
+
+.animate-flame {
+  animation: flame-flicker 2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-flame {
+    animation: none;
+  }
+}
