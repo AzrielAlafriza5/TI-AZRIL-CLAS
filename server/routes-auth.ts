@@ -74,12 +74,13 @@ authRouter.post('/bootstrap-admin', (req, res) => {
     return;
   }
 
-  const fullName = String(req.body?.full_name ?? '').trim();
-  const email = String(req.body?.email ?? '').trim().toLowerCase();
+  const fullName = String(req.body?.full_name ?? 'Administrator Utama').trim() || 'Administrator Utama';
+  const rawEmail = String(req.body?.email ?? '').trim().toLowerCase();
+  const email = rawEmail || 'admin@itazrilclas.ac.id';
   const password = String(req.body?.password ?? '');
 
-  if (!fullName || !email || password.length < 6) {
-    res.status(400).json({ error: 'Nama lengkap, email, dan password minimal 6 karakter wajib diisi.' });
+  if (password.length < 6) {
+    res.status(400).json({ error: 'Sandi / kode verifikasi administrator minimal 6 karakter wajib diisi.' });
     return;
   }
 
@@ -114,6 +115,39 @@ authRouter.post('/login', (req, res) => {
     ? (req.body.expectedRole as 'admin' | 'student')
     : null;
 
+  if (expectedRole === 'admin') {
+    if (!password) {
+      res.status(400).json({ error: 'Sandi atau kode verifikasi admin wajib diisi.' });
+      return;
+    }
+
+    const adminProfile = db
+      .prepare(`
+        SELECT id, username, email, password_hash, role
+        FROM profiles
+        WHERE role = 'admin'
+        LIMIT 1
+      `)
+      .get() as
+      | { id: string; username: string; email: string | null; password_hash: string; role: 'admin' | 'student' }
+      | undefined;
+
+    if (!adminProfile || !verifyPasswordSync(password, adminProfile.password_hash)) {
+      res.status(401).json({ error: 'Kode verifikasi atau sandi administrator tidak valid.' });
+      return;
+    }
+
+    const token = signSessionToken(adminProfile.id, 'admin');
+    setSessionCookie(req, res, token);
+
+    res.json({
+      token,
+      user: buildUserResponse(adminProfile.id),
+      streakOutcome: null,
+    });
+    return;
+  }
+
   if (!identifier || !password) {
     res.status(400).json({ error: 'Username/NIM dan password wajib diisi.' });
     return;
@@ -137,10 +171,7 @@ authRouter.post('/login', (req, res) => {
 
   if (expectedRole && profile.role !== expectedRole) {
     res.status(403).json({
-      error:
-        expectedRole === 'admin'
-          ? 'Akun ini terdaftar sebagai Mahasiswa. Silakan gunakan tab Login Mahasiswa.'
-          : 'Akun ini terdaftar sebagai Administrator. Silakan gunakan tab Login Admin.',
+      error: 'Akun ini terdaftar sebagai Administrator. Silakan gunakan tab Login Admin.',
     });
     return;
   }
