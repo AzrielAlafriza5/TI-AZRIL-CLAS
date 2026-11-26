@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient, type User } from '@supabase/supabase-js';
 import { DB_PATH, db, initDatabase } from './db.ts';
 
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -10,15 +10,14 @@ export const isSupabaseServerConfigured = Boolean(supabaseUrl && supabaseService
 
 let cachedAdminClient: SupabaseClient | null = null;
 let cachedSharedSessionSecret: string | null = null;
-let lastSyncedSnapshotMarker: string | null = null;
-let lastCheckedAt = 0;
+let cachedSystemUserId: string | null = null;
+let lastSyncedSnapshotPath: string | null = null;
 let stateBucketEnsured = false;
 let filesBucketEnsured = false;
 let dbSyncQueue: Promise<void> = Promise.resolve();
 
 const STATE_BUCKET = 'it-azril-clas-state';
 const FILES_BUCKET = 'it-azril-clas-files';
-const DB_OBJECT_NAME = 'it_azril_clas.db';
 const SYSTEM_SESSION_EMAIL = 'system-session@itazrilclas.internal';
 
 export function getSupabaseAdmin(): SupabaseClient | null {
@@ -34,6 +33,42 @@ export function getSupabaseAdmin(): SupabaseClient | null {
   return cachedAdminClient;
 }
 
+async function getSystemSessionUser(client: SupabaseClient): Promise<User | null> {
+  if (cachedSystemUserId) {
+    const { data, error } = await client.auth.admin.getUserById(cachedSystemUserId);
+    if (!error && data?.user) return data.user;
+    cachedSystemUserId = null;
+  }
+
+  let page = 1;
+  while (page <= 10) {
+    const { data, error } = await client.auth.admin.listUsers({ page, perPage: 100 });
+    if (error || !data?.users?.length) break;
+    const found = data.users.find((u) => u.email?.toLowerCase() === SYSTEM_SESSION_EMAIL);
+    if (found) {
+      cachedSystemUserId = found.id;
+      return found;
+    }
+    if (data.users.length < 100) break;
+    page += 1;
+  }
+
+  const generated = crypto.randomBytes(32).toString('hex');
+  const { data: created, error: createErr } = await client.auth.admin.createUser({
+    email: SYSTEM_SESSION_EMAIL,
+    email_confirm: true,
+    app_metadata: {
+      internal: true,
+      session_secret: generated,
+    },
+  });
+  if (!createErr && created?.user) {
+    cachedSystemUserId = created.user.id;
+    return created.user;
+  }
+  return null;
+}
+
 export async function getOrCreateSharedSessionSecret(): Promise<string> {
   const envSecret = process.env.SESSION_SECRET?.trim();
   if (envSecret) return envSecret;
@@ -43,34 +78,23 @@ export async function getOrCreateSharedSessionSecret(): Promise<string> {
   const client = getSupabaseAdmin();
   if (client) {
     try {
-      const { data } = await client.auth.admin.listUsers({ page: 1, perPage: 100 });
-      const existing = data?.users?.find((u) => u.email?.toLowerCase() === SYSTEM_SESSION_EMAIL);
-      const savedSecret = existing?.app_metadata?.session_secret;
-      if (typeof savedSecret === 'string' && savedSecret.length >= 32) {
-        cachedSharedSessionSecret = savedSecret;
+      const sysUser = await getSystemSessionUser(client);
+      if (sysUser) {
+        const savedSecret = sysUser.app_metadata?.session_secret;
+        if (typeof savedSecret === 'string' && savedSecret.length >= 32) {
+          cachedSharedSessionSecret = savedSecret;
+          return cachedSharedSessionSecret;
+        }
+        const generated = crypto.randomBytes(32).toString('hex');
+        await client.auth.admin.updateUserById(sysUser.id, {
+          app_metadata: {
+            ...sysUser.app_metadata,
+            session_secret: generated,
+          },
+        });
+        cachedSharedSessionSecret = generated;
         return cachedSharedSessionSecret;
       }
-
-      const generated = crypto.randomBytes(32).toString('hex');
-      if (existing) {
-        await client.auth.admin.updateUserById(existing.id, {
-          app_metadata: {
-            ...existing.app_metadata,
-            session_secret: generated,
-          },
-        });
-      } else {
-        await client.auth.admin.createUser({
-          email: SYSTEM_SESSION_EMAIL,
-          email_confirm: true,
-          app_metadata: {
-            internal: true,
-            session_secret: generated,
-          },
-        });
-      }
-      cachedSharedSessionSecret = generated;
-      return cachedSharedSessionSecret;
     } catch {
       // Fallback below if Supabase Auth is unreachable
     }
@@ -100,37 +124,31 @@ async function ensurePrivateBucket(bucketName: string, flag: 'state' | 'files'):
   }
 }
 
-export async function syncSqliteSnapshotFromSupabase(forceCheck = false): Promise<void> {
+export async function syncSqliteSnapshotFromSupabase(_forceCheck = false): Promise<void> {
   const client = getSupabaseAdmin();
   if (!client) return;
-
-  const now = Date.now();
-  if (!forceCheck && lastSyncedSnapshotMarker && now - lastCheckedAt < 1500) {
-    return;
-  }
 
   const run = dbSyncQueue.then(async () => {
     try {
       const ready = await ensurePrivateBucket(STATE_BUCKET, 'state');
       if (!ready) return;
 
-      const { data: listData, error: listErr } = await client.storage
-        .from(STATE_BUCKET)
-        .list('', { limit: 10, search: DB_OBJECT_NAME });
-      lastCheckedAt = Date.now();
-      if (listErr || !listData) return;
+      const sysUser = await getSystemSessionUser(client);
+      if (!sysUser) return;
 
-      const remoteMeta = listData.find((item) => item.name === DB_OBJECT_NAME);
-      if (!remoteMeta) return;
+      const remotePath =
+        typeof sysUser.app_metadata?.db_snapshot_path === 'string'
+          ? sysUser.app_metadata.db_snapshot_path
+          : null;
+      if (!remotePath) return;
 
-      const remoteMarker = String(remoteMeta.updated_at || remoteMeta.created_at || remoteMeta.id || '');
-      if (remoteMarker && remoteMarker === lastSyncedSnapshotMarker) {
+      if (remotePath === lastSyncedSnapshotPath) {
         return;
       }
 
       const { data: blob, error: dlErr } = await client.storage
         .from(STATE_BUCKET)
-        .download(DB_OBJECT_NAME);
+        .download(remotePath);
       if (dlErr || !blob) return;
 
       const buf = Buffer.from(await blob.arrayBuffer());
@@ -150,7 +168,7 @@ export async function syncSqliteSnapshotFromSupabase(forceCheck = false): Promis
         // ignore
       }
       initDatabase();
-      lastSyncedSnapshotMarker = remoteMarker || `dl-${Date.now()}`;
+      lastSyncedSnapshotPath = remotePath;
     } catch {
       try {
         db.open();
@@ -181,24 +199,40 @@ export async function uploadSqliteSnapshotToSupabase(): Promise<void> {
       }
 
       const buf = fs.readFileSync(DB_PATH);
+      const newPath = `snapshots/${Date.now()}-${crypto.randomUUID()}.db`;
       const { error } = await client.storage
         .from(STATE_BUCKET)
-        .upload(DB_OBJECT_NAME, buf, {
+        .upload(newPath, buf, {
           contentType: 'application/x-sqlite3',
-          upsert: true,
+          cacheControl: '0',
+          upsert: false,
         });
 
-      if (!error) {
-        const { data: listData } = await client.storage
-          .from(STATE_BUCKET)
-          .list('', { limit: 10, search: DB_OBJECT_NAME });
-        const remoteMeta = listData?.find((item) => item.name === DB_OBJECT_NAME);
-        if (remoteMeta) {
-          lastSyncedSnapshotMarker = String(
-            remoteMeta.updated_at || remoteMeta.created_at || remoteMeta.id || `up-${Date.now()}`
-          );
+      if (error) return;
+
+      const sysUser = await getSystemSessionUser(client);
+      if (sysUser) {
+        await client.auth.admin.updateUserById(sysUser.id, {
+          app_metadata: {
+            ...sysUser.app_metadata,
+            db_snapshot_path: newPath,
+          },
+        });
+      }
+      lastSyncedSnapshotPath = newPath;
+
+      // Best-effort cleanup of older snapshots beyond the latest 3
+      const { data: oldList } = await client.storage
+        .from(STATE_BUCKET)
+        .list('snapshots', { limit: 50, sortBy: { column: 'created_at', order: 'desc' } });
+      if (oldList && oldList.length > 3) {
+        const toDelete = oldList
+          .slice(3)
+          .map((item) => `snapshots/${item.name}`)
+          .filter((p) => p !== newPath);
+        if (toDelete.length > 0) {
+          await client.storage.from(STATE_BUCKET).remove(toDelete);
         }
-        lastCheckedAt = Date.now();
       }
     } catch {
       // Non-fatal
