@@ -416,8 +416,8 @@ export function AppShell({
           </div>
         </header>
 
-        {/* Main Viewport: Mobile 18px, Tablet 24px, Desktop 28px; mobile clearance pb-28 */}
-        <main className="flex-1 p-[18px] tablet:p-6 desktop:p-[28px] pb-28 tablet:pb-8 max-w-[1440px] w-full mx-auto">
+        {/* Main Viewport: Mobile 18px, Tablet 24px, Desktop 28px; mobile clearance pb-32 */}
+        <main className="flex-1 p-[18px] tablet:p-6 desktop:p-[28px] pb-32 tablet:pb-8 max-w-[1440px] w-full mx-auto">
           {children}
         </main>
       </div>

@@ -70,7 +70,11 @@ export function LeaderboardPage({ user }: LeaderboardPageProps) {
     }
   };
 
-  const podium = [entries[1], entries[0], entries[2]].filter(Boolean) as LeaderboardEntry[];
+  const topThree = entries.slice(0, 3);
+  const podiumOrder: LeaderboardEntry[] =
+    topThree.length >= 3
+      ? [topThree[1], topThree[0], topThree[2]]
+      : topThree;
 
   return (
     <div className="space-y-6">
@@ -141,10 +145,10 @@ export function LeaderboardPage({ user }: LeaderboardPageProps) {
         >
           <div className="min-w-0">
             <div className="text-xs font-semibold text-[#B5D45D]">Peringkat Anda Saat Ini</div>
-            <div className="font-display text-xl font-bold text-white mt-1 truncate">
+            <div className="font-display text-lg tablet:text-xl font-bold text-white mt-1 break-words">
               Peringkat #{myEntry.rank} · {myEntry.full_name}
             </div>
-            <div className="text-xs text-[#DCECB8]/80 mt-0.5 truncate">
+            <div className="text-xs text-[#DCECB8]/80 mt-0.5 break-words">
               {myEntry.class_name} · {myEntry.study_program_name}
             </div>
           </div>
@@ -175,68 +179,100 @@ export function LeaderboardPage({ user }: LeaderboardPageProps) {
         />
       ) : (
         <>
-          {/* Top 3 Podium */}
-          <div className="grid grid-cols-1 tablet:grid-cols-3 gap-4 items-end">
-            {podium.map((entry) => {
+          {/* Stepped Visual Podium (2 - 1 - 3 on all viewports) */}
+          <div
+            className={`grid items-end gap-2 tablet:gap-4 desktop:gap-5 pt-2 ${
+              topThree.length === 1
+                ? 'grid-cols-1 max-w-[240px] mx-auto'
+                : topThree.length === 2
+                  ? 'grid-cols-2 max-w-lg mx-auto'
+                  : 'grid-cols-[1fr_1.12fr_1fr] tablet:grid-cols-3'
+            }`}
+          >
+            {podiumOrder.map((entry) => {
               const isFirst = entry.rank === 1;
+              const isSecond = entry.rank === 2;
+              const stepHeight = isFirst
+                ? 'min-h-[132px] tablet:min-h-[172px] desktop:min-h-[188px]'
+                : isSecond
+                  ? 'min-h-[104px] tablet:min-h-[138px] desktop:min-h-[150px]'
+                  : 'min-h-[86px] tablet:min-h-[114px] desktop:min-h-[124px]';
+
+              const stepSurface = isFirst
+                ? 'bg-[#171A17] text-white border border-[#232822]'
+                : isSecond
+                  ? 'bg-[#DCECB8]/75 text-[#20251D] border border-[#B5D45D]'
+                  : 'bg-white text-[#20251D] border border-[#D5E4B6]';
+
               return (
-                <Card
+                <div
                   key={entry.student_id}
-                  variant={isFirst ? 'dark' : 'white'}
-                  className={`text-center ${
-                    isFirst
-                      ? 'tablet:order-2 tablet:py-8 border-[#232822]'
-                      : entry.rank === 2
-                        ? 'tablet:order-1 border-[#B5D45D]'
-                        : 'tablet:order-3'
-                  }`}
+                  className="flex flex-col items-center justify-end min-w-0"
                 >
-                  <div
-                    className={`w-12 h-12 rounded-2xl mx-auto flex items-center justify-center ${
-                      isFirst
-                        ? 'bg-[#B5D45D] text-[#171A17]'
-                        : entry.rank === 2
-                          ? 'bg-[#DCECB8] text-[#20251D]'
-                          : 'bg-[#FF7A1A]/15 text-[#FF7A1A]'
-                    }`}
-                  >
-                    {isFirst ? <Trophy className="w-5 h-5" /> : <Medal className="w-5 h-5" />}
-                  </div>
-                  <div
-                    className={`font-display text-xs font-bold mt-3 ${
-                      isFirst ? 'text-[#B5D45D]' : 'text-[#6F7B68]'
-                    }`}
-                  >
-                    PERINGKAT #{entry.rank}
-                  </div>
-                  <div
-                    className={`font-display text-base font-bold mt-1 truncate ${
-                      isFirst ? 'text-white' : 'text-[#20251D]'
-                    }`}
-                  >
-                    {entry.full_name}
-                  </div>
-                  <div className={`text-xs mt-0.5 ${isFirst ? 'text-[#DCECB8]/75' : 'text-[#6F7B68]'}`}>
-                    {entry.class_name}
-                  </div>
-                  <div
-                    className={`font-display text-3xl font-bold tabular-nums mt-3 ${
-                      isFirst ? 'text-[#B5D45D]' : 'text-[#20251D]'
-                    }`}
-                  >
-                    {entry.period_points}{' '}
-                    <span
-                      className={`text-xs font-semibold ${
-                        isFirst ? 'text-[#DCECB8]/70' : 'text-[#6F7B68]'
+                  {/* Student Identity Above Pedestal */}
+                  <div className="flex flex-col items-center text-center px-1 pb-2.5 tablet:pb-3.5 w-full min-w-0">
+                    <div
+                      className={`w-10 h-10 tablet:w-12 tablet:h-12 rounded-2xl flex items-center justify-center shrink-0 mb-2 ${
+                        isFirst
+                          ? 'bg-[#171A17] text-[#B5D45D] border-2 border-[#B5D45D]'
+                          : isSecond
+                            ? 'bg-[#DCECB8] text-[#20251D] border border-[#B5D45D]'
+                            : 'bg-[#FF7A1A]/15 text-[#FF7A1A] border border-[#FF7A1A]/35'
                       }`}
                     >
-                      Poin
-                    </span>
+                      {isFirst ? (
+                        <Trophy className="w-4 h-4 tablet:w-5 tablet:h-5" />
+                      ) : (
+                        <Medal className="w-4 h-4 tablet:w-5 tablet:h-5" />
+                      )}
+                    </div>
+
+                    <div className="font-display text-[11px] tablet:text-sm desktop:text-[15px] font-bold text-[#20251D] leading-snug break-words w-full">
+                      {entry.full_name}
+                    </div>
+                    <div className="text-[10px] tablet:text-xs text-[#6F7B68] leading-tight mt-0.5 break-words w-full">
+                      {entry.class_name}
+                    </div>
                   </div>
-                  <div className="mt-3 flex justify-center">
-                    <StudentStatusIndicator status={entry.status} />
+
+                  {/* Stepped Podium Pedestal */}
+                  <div
+                    className={`w-full rounded-t-[20px] rounded-b-[16px] tablet:rounded-t-[24px] tablet:rounded-b-[20px] px-2 py-3 tablet:px-4 tablet:py-4 flex flex-col items-center justify-between gap-2 text-center transition-all ${stepHeight} ${stepSurface}`}
+                  >
+                    <div
+                      className={`font-display text-lg tablet:text-2xl font-extrabold leading-none tabular-nums ${
+                        isFirst
+                          ? 'text-[#B5D45D]'
+                          : isSecond
+                            ? 'text-[#3E7B27]'
+                            : 'text-[#FF7A1A]'
+                      }`}
+                    >
+                      #{entry.rank}
+                    </div>
+
+                    <div className="leading-none">
+                      <div
+                        className={`font-display text-xl tablet:text-3xl font-bold tabular-nums ${
+                          isFirst ? 'text-white' : 'text-[#20251D]'
+                        }`}
+                      >
+                        {entry.period_points}
+                      </div>
+                      <div
+                        className={`text-[10px] tablet:text-xs font-semibold mt-0.5 ${
+                          isFirst ? 'text-[#DCECB8]/80' : 'text-[#6F7B68]'
+                        }`}
+                      >
+                        Poin
+                      </div>
+                    </div>
+
+                    <div className="scale-[0.88] tablet:scale-100 origin-center">
+                      <StudentStatusIndicator status={entry.status} />
+                    </div>
                   </div>
-                </Card>
+                </div>
               );
             })}
           </div>
